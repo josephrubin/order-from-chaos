@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Setup the environment for blodkorv development/deployment.
+# $ . setup [--full]
+
+# File/dir. --------------------------------------------------------------------
+
+# The root of the entire blodkorv tree.
+ROOT="$(while [ $PWD != '/' ]; do test -e .ev_root && pwd && break; cd ..; done)"
+
+# The URL of the remote git repository.
+GIT_REMOTE_URL="$(git config --get remote.origin.url)"
+
+# Path to python virtual environment.
+VENV_DIR=$ROOT/ev
+
+# Export. ----------------------------------------------------------------------
+
+# Allow other scripts to access important project constants.
+export ROOT GIT_REMOTE_URL
+
+# Ensure all our python sources are importable.
+export PYTHONPATH="$ROOT/source"
+
+# Setup. -----------------------------------------------------------------------
+
+# Default file permissions for a server.
+umask 0022
+
+# If "--full" is supplied, create a new virtual environment and download listed
+# packages. This is only necessary after pulling a new commit.
+if [ "$1" = "--full" ]; then
+    # Leave the current virtual environment if we are in one.
+    if command -v deactivate > /dev/null; then
+        deactivate
+    fi
+
+    # Create and enter a new virtual environment.
+    echo Creating virtual environment.
+    python3 -m venv $VENV_DIR
+    source $VENV_DIR/bin/activate
+
+    # Install required python packages.
+    echo Installing packages.
+    pip install -qr requirements.txt
+else
+    # Enter the virtual environment.
+    source $VENV_DIR/bin/activate
+fi
+
+# Public function. -------------------------------------------------------------
+
+# Lint and style check a python file.
+pystyle() {
+    pylint "$@"
+    pycodestyle --max-line-length=80 "$@"
+}
