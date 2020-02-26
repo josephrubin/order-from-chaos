@@ -21,7 +21,7 @@ def main():
     # for j in range(4):
         # if j!=3: continue
     # environment parameters
-    count = 200000
+    count = 2000
     shape = 'box'
     pdrop = 1
     numdrops = 5
@@ -80,11 +80,11 @@ def main():
         # plt.plot(circle)
     plt.axis(xmin=0, xmax=1, ymin=0, ymax=1)
     plt.axis('equal')
-    fname = sys.argv[1] + shape + str(count) + '-' + str(pstick1) + '-' + str(pmelt) + '-' + str(pstick2) + '-' + str(delta) + '-' + str(width) + '-' + str(numdrops) + '-' +  str(minStemLen) + '-' + str(hexa) + '.png'
+    #fname = sys.argv[1] + shape + str(count) + '-' + str(pstick1) + '-' + str(pmelt) + '-' + str(pstick2) + '-' + str(delta) + '-' + str(width) + '-' + str(numdrops) + '-' +  str(minStemLen) + '-' + str(hexa) + '.png'
     ax.set(xlim=(-1, 1), ylim=(-1, 1))
     ax.axis('equal')
-    # plt.show()
-    fig.savefig(fname)
+    plt.show()
+    #fig.savefig(fname)
 
 def phase1(p1count, width, shape):
     stems = []
