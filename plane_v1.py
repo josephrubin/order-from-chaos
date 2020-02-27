@@ -17,7 +17,7 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 2000
+DROP_COUNT = 200000
 # The radius of a drop.
 DROP_RADIUS = 0.05
 # The radius of a stem.
@@ -27,11 +27,16 @@ BOUNCE_DISTANCE = 0.2
 # The shape of this 2D plane.
 PLANE_SHAPE = DISK
 # The probability that any given stem will melt after a single simulation step.
-MELT_PROBABILITY = 0.0002
+MELT_PROBABILITY = 0.0003
 # The probability that a drop will stick to the ground.
-GROUND_STICK_PROBABILITY = 0.05
+GROUND_STICK_PROBABILITY = 0.005
 # The probability that a drop will stick to a stem if it doesn't bounce.
 STEM_STICK_PROBABILITY = 1
+# The probability that all stems under PURGE_MINIMUM_STEM_LENGTH will be destroyed
+# in each simulation step.
+PURGE_PROBABILITY = 0.0005
+# The minimum stem length to not be removed during a purge.
+PURGE_MINIMUM_STEM_LENGTH = 9
 
 
 def bounce_probability(bounce_count):
@@ -43,18 +48,21 @@ def bounce_probability(bounce_count):
 def _main():
     """Run a 2D simulation of life. Chazelle is love. Chazelle is life."""
     state = simulate_step([], DROP_COUNT)
-    print(len(state))
-
     stems = state
+    print('Number of stems: ', len(stems))
+
     fig = plt.gcf()
     ax = plt.gca()
     ax.cla() 
-    if PLANE_SHAPE == 'disk': ax.add_artist(plt.Circle((0,0), radius=1, fill=False))
+    if PLANE_SHAPE == DISK: ax.add_artist(plt.Circle((0,0), radius=1, fill=False))
     for stem in stems:
-        if len(stem) < 5: continue
-        ax.plot(stem[-1][0], stem[-1][1], marker='o')
-        ax.add_artist(plt.Circle((stem[-1][0], stem[-1][1]), radius=BOUNCE_DISTANCE/2, fill=False))
-        ax.add_artist(plt.Circle((stem[-1][0], stem[-1][1]), radius=STEM_RADIUS, fill=False, color='r'))
+        #if len(stem) < 15: continue
+        l = len(stem)
+        ll = min((l / 100), 1)
+        ll = 0.5
+
+        ax.add_artist(plt.Circle((stem[0][0], stem[0][1]), radius=BOUNCE_DISTANCE, fill=False))
+        ax.add_artist(plt.Circle((stem[0][0], stem[0][1]), radius=STEM_RADIUS, fill=True, color=(ll, ll, ll)))
         # plt.plot(circle)
     plt.axis(xmin=0, xmax=1, ymin=0, ymax=1)
     plt.axis('equal')
@@ -101,6 +109,10 @@ def _simulate_single_step(state):
         if drop_stem_intersect and random_real() <= bounce_probability(bounce_count):
             # The drop bounces.
             assert stem_intersect_index is not None
+            ####
+            if random_real() <= STEM_STICK_PROBABILITY:
+                state[stem_intersect_index].insert(0, drop_coord)
+            ####
             bounce_count += 1
             bounce_angle = random_theta()
             bounce_offset = polar_to_cartesian(BOUNCE_DISTANCE, bounce_angle)
@@ -120,6 +132,7 @@ def _simulate_single_step(state):
                     state.append([drop_coord])
 
     # Melt stems from the bottom.
+    to_delete = []
     for i, stem in enumerate(stems):
         # Ensure there are no empty stems.
         assert stem
@@ -128,9 +141,18 @@ def _simulate_single_step(state):
             stem.pop()
             # Remove empty stems.
             if not stem:
-                del stems[i]
+                to_delete.append(i)
 
-    return state
+    # The purge.
+    if random_real() <= PURGE_PROBABILITY:
+        print("PURGE")
+        for i, stem in enumerate(stems):
+            if len(stem) < PURGE_MINIMUM_STEM_LENGTH:
+                to_delete.append(i)
+
+    new_state = [state[i] for i in range(len(state)) if i not in to_delete]
+
+    return new_state
 
 
 def plotstems(stems):
