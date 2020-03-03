@@ -7,6 +7,7 @@ import math
 from os import sys
 import random
 
+import kdtree
 from matplotlib import pyplot as plt
 
 
@@ -34,28 +35,33 @@ GROUND_STICK_PROBABILITY = 0.005
 STEM_STICK_PROBABILITY = 1
 # The probability that all stems under PURGE_MINIMUM_STEM_LENGTH will be destroyed
 # in each simulation step.
-PURGE_PROBABILITY = 0.0005
+PURGE_PROBABILITY = 0#0.0005
 # The minimum stem length to not be removed during a purge.
 PURGE_MINIMUM_STEM_LENGTH = 9
+
+
+# TODO: on intersection, add to highest one.
 
 
 def bounce_probability(bounce_count):
     """Return the probability that a drop will bounce given that it
     has bounced `bounce_count` times already."""
+    # TODO: allow bouncing
     return 1 if bounce_count == 0 else 0
 
 
 def _main():
     """Run a 2D simulation of life. Chazelle is love. Chazelle is life."""
-    state = simulate_step([], DROP_COUNT)
-    stems = state
+    state = {'stems': {}, 'geo': kdtree.create(dimensions=2), 'index': {}, 'steps_completed': 0}
+    state = simulate_step(state, DROP_COUNT)
+    stems = state['stems']
     print('Number of stems: ', len(stems))
 
     fig = plt.gcf()
     ax = plt.gca()
     ax.cla() 
     if PLANE_SHAPE == DISK: ax.add_artist(plt.Circle((0,0), radius=1, fill=False))
-    for stem in stems:
+    for stem in stems.values():
         #if len(stem) < 15: continue
         l = len(stem)
         ll = min((l / 100), 1)
@@ -83,7 +89,14 @@ def simulate_step(state, step_count=1):
 
 def _simulate_single_step(state):
     """Run a single step of the simulation on `state`, returning the next state."""
-    stems = state
+    stems = state['stems']
+    geo = state['geo']
+    index = state['index']
+    steps_completed = state['steps_completed']
+
+
+    #print('stems: ', stems)
+    #print('index: ', index)
 
     # Create a new drop in the plane.
     drop_coord = random_coord(PLANE_SHAPE)
@@ -97,21 +110,24 @@ def _simulate_single_step(state):
         # Check intersection with any stem.
         drop_stem_intersect = False
         stem_intersect_index = None
-        for i, stem in enumerate(stems):
-            # The top of the stem is the first element.
-            stem_coord = stem[0]
-            if circle_circle_intersect(stem_coord, drop_coord, STEM_RADIUS, DROP_RADIUS):
-                drop_stem_intersect = True
-                stem_intersect_index = i
-                break
+
+        intersections = geo.search_nn_dist(drop_coord, STEM_RADIUS + DROP_RADIUS)
+        if intersections:
+            drop_stem_intersect = True
+            stem_intersect_index = index[intersections[0]]
+            #print('INTERSECTIONS: ', intersections)
+            #print('INTERSECT: ', intersections[0])
+            #print('INDEX: ', index[intersections[0]])
+            #print('STEMS:' , stems)
 
         # Check if the drop bounces.
         if drop_stem_intersect and random_real() <= bounce_probability(bounce_count):
+            #print('BOUNCE')
             # The drop bounces.
             assert stem_intersect_index is not None
             ####
-            if random_real() <= STEM_STICK_PROBABILITY:
-                state[stem_intersect_index].insert(0, drop_coord)
+            #if random_real() <= STEM_STICK_PROBABILITY:
+            #    state[stem_intersect_index].insert(0, drop_coord)
             ####
             bounce_count += 1
             bounce_angle = random_theta()
@@ -124,35 +140,59 @@ def _simulate_single_step(state):
                 # The drop has landed on top of an existing stem. Replace
                 # the top of the stem with the new drop.
                 if random_real() <= STEM_STICK_PROBABILITY:
-                    state[stem_intersect_index].insert(0, drop_coord)
+                    #print('intersected with stem: ', stems[stem_intersect_index])
+                    assert len(stems[stem_intersect_index]) > 0
+                    # Assign the new drop an index.
+                    index[drop_coord] = steps_completed
+                    #del index[stems[stem_intersect_index][0]]
+                    geo.remove(stems[stem_intersect_index][0])
+                    geo.add(drop_coord)
+                    stems[stem_intersect_index].insert(0, drop_coord)
+                    stems[steps_completed] = stems[stem_intersect_index]
+                    del stems[stem_intersect_index]
             else:
                 # The drop has landed outside of any stem. Simply add
                 # it as a new stem.
                 if random_real() <= GROUND_STICK_PROBABILITY:
-                    state.append([drop_coord])
+                    assert drop_coord not in index
+                    assert steps_completed not in stems
+                    # Assign the new drop an index.
+                    index[drop_coord] = steps_completed
+                    #print('add')
+                    stems[steps_completed] = ([drop_coord])
+                    geo.add(drop_coord)
 
+    """
     # Melt stems from the bottom.
     to_delete = []
-    for i, stem in enumerate(stems):
+    for stem_index in stems:
         # Ensure there are no empty stems.
+        stem = stems[stem_index]
         assert stem
         if random_real() <= MELT_PROBABILITY:
             # The bottom of the stem is at the end of the list.
             stem.pop()
             # Remove empty stems.
             if not stem:
-                to_delete.append(i)
+                to_delete.append(stem_index)
 
     # The purge.
     if random_real() <= PURGE_PROBABILITY:
-        print("PURGE")
-        for i, stem in enumerate(stems):
+        for stem_index in stems:
+            stem = stems[stem_index]
             if len(stem) < PURGE_MINIMUM_STEM_LENGTH:
-                to_delete.append(i)
+                to_delete.append(stem_index)
 
-    new_state = [state[i] for i in range(len(state)) if i not in to_delete]
-
-    return new_state
+    for i in to_delete:
+        del index[i]
+        geo.remove(stems[i][0])
+        geo.add(stems[i][1])
+    
+    print(stems)
+    new_stems = {key: val for (key, val) in stems.items() if key not in to_delete}
+    #new_stems = [stems[i] for i in range(len(stems)) if i not in to_delete]
+    """
+    return {'stems': stems, 'geo': geo, 'index': index, 'steps_completed': steps_completed + 1}
 
 
 def plotstems(stems):
@@ -162,6 +202,7 @@ def plotstems(stems):
     plt.axis(xmin=0, xmax=1, ymin=0, ymax=1)
     plt.draw()
     plt.pause(0.01)
+
 
 def plotstemtops(stems, width, delta):
     # fig = plt.gcf()
