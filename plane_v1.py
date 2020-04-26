@@ -7,8 +7,9 @@ import math
 from os import sys
 import random
 
-import kdtree
+import kdtreemap
 from matplotlib import pyplot as plt
+import matplotlib
 
 
 __author__ = "Jeremey Chizewer, Joseph Rubin"
@@ -18,7 +19,7 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 200000
+DROP_COUNT = 20000
 # The radius of a drop.
 DROP_RADIUS = 0.05
 # The radius of a stem.
@@ -38,6 +39,8 @@ STEM_STICK_PROBABILITY = 1
 PURGE_PROBABILITY = 0#0.0005
 # The minimum stem length to not be removed during a purge.
 PURGE_MINIMUM_STEM_LENGTH = 9
+# Run in interactive mode
+INTERACTIVE_MODE = True
 
 
 # TODO: on intersection, add to highest one.
@@ -52,13 +55,35 @@ def bounce_probability(bounce_count):
 
 def _main():
     """Run a 2D simulation of life. Chazelle is love. Chazelle is life."""
-    state = {'stems': {}, 'geo': kdtree.create(dimensions=2), 'index': {}, 'steps_completed': 0}
+    visualize_init()
+
+    state = {'stems': {}, 'geo': kdtreemap.create(dimensions=2), 'index': {}, 'steps_completed': 0}
     state = simulate_step(state, DROP_COUNT)
     stems = state['stems']
     print('Number of stems: ', len(stems))
+    visualize_state(state)
+
+
+def visualize_init():
+    matplotlib.use('TkAgg')
+    plt.clf()
+    fig = plt.gcf()
+    ax = plt.gca()
+    plt.axis(xmin=0, xmax=1, ymin=0, ymax=1)
+    plt.axis('equal')
+    #fname = sys.argv[1] + shape + str(count) + '-' + str(pstick1) + '-' + str(pmelt) + '-' + str(pstick2) + '-' + str(delta) + '-' + str(width) + '-' + str(numdrops) + '-' +  str(minStemLen) + '-' + str(hexa) + '.png'
+    ax.set(xlim=(-1, 1), ylim=(-1, 1))
+    ax.axis('equal')
+
+
+def visualize_state(state):
+    stems = state['stems']
+
+    plt.clf()
 
     fig = plt.gcf()
     ax = plt.gca()
+    
     ax.cla() 
     if PLANE_SHAPE == DISK: ax.add_artist(plt.Circle((0,0), radius=1, fill=False))
     for stem in stems.values():
@@ -70,13 +95,30 @@ def _main():
         ax.add_artist(plt.Circle((stem[0][0], stem[0][1]), radius=BOUNCE_DISTANCE, fill=False))
         ax.add_artist(plt.Circle((stem[0][0], stem[0][1]), radius=STEM_RADIUS, fill=True, color=(ll, ll, ll)))
         # plt.plot(circle)
+
     plt.axis(xmin=0, xmax=1, ymin=0, ymax=1)
     plt.axis('equal')
     #fname = sys.argv[1] + shape + str(count) + '-' + str(pstick1) + '-' + str(pmelt) + '-' + str(pstick2) + '-' + str(delta) + '-' + str(width) + '-' + str(numdrops) + '-' +  str(minStemLen) + '-' + str(hexa) + '.png'
     ax.set(xlim=(-1, 1), ylim=(-1, 1))
     ax.axis('equal')
-    plt.show()
+    #plt.show()
+    plt.draw()
+    plt.pause(0.0001)
     #fig.savefig(fname)
+
+
+def visualize_drop(coords):
+    fig = plt.gcf()
+    ax = plt.gca()
+    drop_artist = plt.Circle((coords[0], coords[1]), radius=DROP_RADIUS, fill=False)
+    ax.add_artist(drop_artist)
+    plt.draw()
+    plt.pause(0.2)
+
+
+def unvisualize_drop(artist):
+    artist.remove()
+    print("REMOVED")
 
 
 def simulate_step(state, step_count=1):
@@ -94,12 +136,14 @@ def _simulate_single_step(state):
     index = state['index']
     steps_completed = state['steps_completed']
 
-
     #print('stems: ', stems)
     #print('index: ', index)
 
     # Create a new drop in the plane.
     drop_coord = random_coord(PLANE_SHAPE)
+
+    if INTERACTIVE_MODE:
+        drop_artist = visualize_drop(drop_coord)
 
     # The drop can keep bouncing as long as it intersects a stem
     # and hasn't stuck yet. The bounce probability is determined
@@ -111,10 +155,13 @@ def _simulate_single_step(state):
         drop_stem_intersect = False
         stem_intersect_index = None
 
+        # Search the tree for any drop intersections.
         intersections = geo.search_nn_dist(drop_coord, STEM_RADIUS + DROP_RADIUS)
         if intersections:
             drop_stem_intersect = True
             stem_intersect_index = index[intersections[0]]
+            if INTERACTIVE_MODE:
+                unvisualize_drop(drop_artist)
             #print('INTERSECTIONS: ', intersections)
             #print('INTERSECT: ', intersections[0])
             #print('INDEX: ', index[intersections[0]])
