@@ -114,13 +114,13 @@ def visualize_state_stems(state, settings):
         point = points[str(point_id)]
         coord = point['coord']
         height = point['height']
-        point_id_bottom = stem[0]
-        point_bottom = points[str(point_id_bottom)]
-        coord_bottom = point_bottom['coord']
+        #point_id_bottom = stem[0]
+        #point_bottom = points[str(point_id_bottom)]
+        #coord_bottom = point_bottom['coord']
         drop_artist = plt.Circle((coord[0], coord[1]), radius=settings['DROP_RADIUS'], fill=True, color=(height / height_max, 0, 0, 1))
-        drop_artist_bottom = plt.Circle((coord_bottom[0], coord_bottom[1]), radius=settings['DROP_RADIUS'], fill=True, color=(0, 0, 1, 0.1))
+        #drop_artist_bottom = plt.Circle((coord_bottom[0], coord_bottom[1]), radius=settings['DROP_RADIUS'], fill=True, color=(0, 0, 1, 0.1))
         ax.add_artist(drop_artist)
-        ax.add_artist(drop_artist_bottom)
+        #ax.add_artist(drop_artist_bottom)
 
     plt.draw()
 

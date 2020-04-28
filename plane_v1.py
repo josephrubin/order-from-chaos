@@ -21,7 +21,7 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 200000
+DROP_COUNT = 20000
 # The radius of a drop.
 DROP_RADIUS = 0.05
 # The radius of a stem.
@@ -31,13 +31,13 @@ BOUNCE_DISTANCE = 0.3
 # The shape of this 2D plane.
 PLANE_SHAPE = DISK
 # The probability that any given stem will melt after a single simulation step.
-MELT_PROBABILITY = 0.0003
+MELT_PROBABILITY = 0.03
 # The probability that a drop will stick to the ground.
 GROUND_STICK_PROBABILITY = 1#0.0005
 # The probability that a drop will stick to a stem if it doesn't bounce.
 STEM_STICK_PROBABILITY = 1
 # Run in interactive (draw-as-you-go) mode.
-INTERACTIVE_MODE = True
+INTERACTIVE_MODE = False
 # Delay between each draw in INTERACTIVE_MODE.
 INTERACTIVE_DELAY = 0.0001
 
@@ -192,9 +192,9 @@ def _simulate_single_step(state):
                     intersection_stem = highest_point['stem']
                     assert len(intersection_stem) > 0
                     if INTERACTIVE_MODE:
-                        pass
-                        #unvisualize_drop(highest_point['artist'])
+                        unvisualize_drop(highest_point['artist'])
                         #points[highest_point_id]['artist'] = visualize_drop(highest_point['coord'])
+                    geo.remove(points[intersection_stem[-1]]['coord'])
                     geo.add(drop_coord, value=steps_completed)
                     new_height = points[intersection_stem[-1]]['height'] + 1
                     intersection_stem.append(steps_completed)
@@ -229,45 +229,15 @@ def _simulate_single_step(state):
             del points[bottom_point_id]
             if not stem:
                 to_remove.add(i)
+                if INTERACTIVE_MODE:
+                    unvisualize_drop(point['artist'])
             else:
                 for point_id in stem:
                     points[point_id]['height'] -= 1
                     assert points[point_id]['height'] >= 0
-            if INTERACTIVE_MODE:
-                unvisualize_drop(point['artist'])
 
     stems = [s for i, s in enumerate(stems) if i not in to_remove]
 
-    """
-    # Melt stems from the bottom.
-    to_delete = []
-    for stem_index in stems:
-        # Ensure there are no empty stems.
-        stem = stems[stem_index]
-        assert stem
-        if random_real() <= MELT_PROBABILITY:
-            # The bottom of the stem is at the end of the list.
-            stem.pop()
-            # Remove empty stems.
-            if not stem:
-                to_delete.append(stem_index)
-
-    # The purge.
-    if random_real() <= PURGE_PROBABILITY:
-        for stem_index in stems:
-            stem = stems[stem_index]
-            if len(stem) < PURGE_MINIMUM_STEM_LENGTH:
-                to_delete.append(stem_index)
-
-    for i in to_delete:
-        del index[i]
-        geo.remove(stems[i][0])
-        geo.add(stems[i][1])
-    
-    print(stems)
-    new_stems = {key: val for (key, val) in stems.items() if key not in to_delete}
-    #new_stems = [stems[i] for i in range(len(stems)) if i not in to_delete]
-    """
     return {'points': points, 'stems': stems, 'geo': geo, 'steps_completed': steps_completed + 1}
 
 
