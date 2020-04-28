@@ -624,7 +624,6 @@ def check_dimensionality(point_list, dimensions=None):
     return dimensions
 
 
-
 def level_order(tree, include_all=False):
     """ Returns an iterator over the tree in level-order
 

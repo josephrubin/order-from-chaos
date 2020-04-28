@@ -21,25 +21,27 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 20000
+DROP_COUNT = 200000
 # The radius of a drop.
 DROP_RADIUS = 0.05
 # The radius of a stem.
 STEM_RADIUS = DROP_RADIUS
 # The distance that a drop will bounce.
-BOUNCE_DISTANCE = 0.3
+BOUNCE_DISTANCE = 6 * DROP_RADIUS
 # The shape of this 2D plane.
 PLANE_SHAPE = DISK
 # The probability that any given stem will melt after a single simulation step.
-MELT_PROBABILITY = 0.03
+MELT_PROBABILITY = 0.003
 # The probability that a drop will stick to the ground.
-GROUND_STICK_PROBABILITY = 1#0.0005
+GROUND_STICK_PROBABILITY = 0.5
 # The probability that a drop will stick to a stem if it doesn't bounce.
 STEM_STICK_PROBABILITY = 1
 # Run in interactive (draw-as-you-go) mode.
 INTERACTIVE_MODE = False
 # Delay between each draw in INTERACTIVE_MODE.
-INTERACTIVE_DELAY = 0.0001
+INTERACTIVE_DELAY = 0.0000001
+#
+INTERACTIVE_FAST_MODE = True
 
 
 def bounce_probability(bounce_count):
@@ -99,6 +101,40 @@ def visualize_init():
     if PLANE_SHAPE == DISK: ax.add_artist(plt.Circle((0,0), radius=1, fill=False))
 
 
+def visualize_state(state):
+    stems = state['stems']
+    points = state['points']
+
+    fig = plt.gcf()
+    
+    plt.clf()
+    ax = plt.gca()
+    fig.set_size_inches(12, 12)
+    ax.axis('equal', adjustable='datalim')
+    ax.set(xlim=(-1.5, 1.5), ylim=(-1.5, 1.5))
+
+    if PLANE_SHAPE == DISK: ax.add_artist(plt.Circle((0,0), radius=1, fill=False))
+
+    height_max = None
+    for point_id in points:
+        point = points[point_id]
+        height = point['height']
+        if height_max is None or height > height_max:
+            height_max = height
+
+    for stem in stems:
+        point_id = stem[-1]
+        point = points[point_id]
+        coord = point['coord']
+        height = point['height']
+        assert height + 1 == len(stem)
+        drop_artist = plt.Circle((coord[0], coord[1]), radius=DROP_RADIUS, fill=True, color=(height / height_max, 0, 0, 1))
+        ax.add_artist(drop_artist)
+
+    plt.draw()
+    plt.pause(INTERACTIVE_DELAY)
+
+
 def visualize_drop(coords):
     fig = plt.gcf()
     ax = plt.gca()
@@ -109,10 +145,30 @@ def visualize_drop(coords):
     return drop_artist
 
 
+def visualize_drop_bounce(coords):
+    fig = plt.gcf()
+    ax = plt.gca()
+    drop_artist = plt.Circle((coords[0], coords[1]), radius=DROP_RADIUS, fill=True, color=(0, 1, 0, 0.4))
+    ax.add_artist(drop_artist)
+    plt.draw()
+    plt.pause(INTERACTIVE_DELAY)
+    return drop_artist
+
+
+def visualize_drop_active(coords):
+    fig = plt.gcf()
+    ax = plt.gca()
+    drop_artist = plt.Circle((coords[0], coords[1]), radius=DROP_RADIUS, fill=True, color=(0, 0, 1, 0.4))
+    ax.add_artist(drop_artist)
+    plt.draw()
+    plt.pause(INTERACTIVE_DELAY)
+    return drop_artist
+
+
 def unvisualize_drop(artist):
     artist.remove()
     plt.draw()
-    plt.pause(INTERACTIVE_DELAY)
+    #plt.pause(INTERACTIVE_DELAY)
 
 
 def simulate_step(state, step_count=1):
@@ -132,12 +188,16 @@ def _simulate_single_step(state):
     points = state['points']
     steps_completed = state['steps_completed']
 
+    if INTERACTIVE_FAST_MODE:
+        if steps_completed % 100 == 0:
+            visualize_state(state)
+
     # Create a new drop in the plane.
     drop_coord = random_coord(PLANE_SHAPE)
 
     drop_artist = None
     if INTERACTIVE_MODE:
-        drop_artist = visualize_drop(drop_coord)
+        drop_artist = visualize_drop_active(drop_coord)
 
     # The drop can keep bouncing as long as it intersects a stem
     # and hasn't stuck yet. The bounce probability is determined
@@ -168,6 +228,7 @@ def _simulate_single_step(state):
                     highest_point = point
                     highest_point_id = point_id
             drop_stem_intersect = True
+            assert points[highest_point['stem'][-1]]['coord'] == highest_point['coord']
 
         # Check if the drop bounces.
         if drop_stem_intersect and random_real() <= bounce_probability(bounce_count):
@@ -181,7 +242,7 @@ def _simulate_single_step(state):
             #drop_coord = (drop_coord[0] + bounce_offset[0], drop_coord[1] + bounce_offset[1])
             drop_coord = (highest_point['coord'][0] + bounce_offset[0], highest_point['coord'][1] + bounce_offset[1])
             if INTERACTIVE_MODE:
-                drop_artist = visualize_drop(drop_coord)
+                drop_artist = visualize_drop_bounce(drop_coord)
         else:
             # The drop does not bounce.
             drop_stuck = True
@@ -192,22 +253,25 @@ def _simulate_single_step(state):
                     intersection_stem = highest_point['stem']
                     assert len(intersection_stem) > 0
                     if INTERACTIVE_MODE:
+                        unvisualize_drop(drop_artist)
+                        drop_artist = visualize_drop(drop_coord)
+                    if INTERACTIVE_MODE:
                         unvisualize_drop(highest_point['artist'])
                         #points[highest_point_id]['artist'] = visualize_drop(highest_point['coord'])
                     geo.remove(points[intersection_stem[-1]]['coord'])
                     geo.add(drop_coord, value=steps_completed)
-                    new_height = points[intersection_stem[-1]]['height'] + 1
+                    new_height = highest_point['height'] + 1
                     intersection_stem.append(steps_completed)
                     points[steps_completed] = {'height': new_height, 'artist': drop_artist, 'coord': drop_coord, 'stem': intersection_stem}
-                    #stems[stem_intersect_index].insert(0, drop_coord)
-                    #stems[steps_completed] = stems[stem_intersect_index]
-                    #del stems[stem_intersect_index]
             else:
                 # The drop has landed outside of any stem. Simply add
                 # it as a new stem.
                 if random_real() <= GROUND_STICK_PROBABILITY:
                     assert steps_completed not in stems
                     # Create a new stem for this drop.
+                    if INTERACTIVE_MODE:
+                        unvisualize_drop(drop_artist)
+                        drop_artist = visualize_drop(drop_coord)
                     new_stem = [steps_completed]
                     stems.append(new_stem)
                     geo.add(drop_coord, value=steps_completed)

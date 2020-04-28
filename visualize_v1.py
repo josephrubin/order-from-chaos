@@ -114,6 +114,7 @@ def visualize_state_stems(state, settings):
         point = points[str(point_id)]
         coord = point['coord']
         height = point['height']
+        print(height)
         #point_id_bottom = stem[0]
         #point_bottom = points[str(point_id_bottom)]
         #coord_bottom = point_bottom['coord']
