@@ -244,12 +244,14 @@ class KDNode(Node):
             if point[current.axis] < current.data[current.axis]:
                 if current.left is None:
                     current.left = current.create_subnode(point)
+                    current.left.value = value
                     return current.left
                 else:
                     current = current.left
             else:
                 if current.right is None:
                     current.right = current.create_subnode(point)
+                    current.right.value = value
                     return current.right
                 else:
                     current = current.right
