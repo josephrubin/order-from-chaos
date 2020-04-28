@@ -59,7 +59,7 @@ def _main():
     """Run a 2D simulation of life. Chazelle is love. Chazelle is life."""
     visualize_init()
 
-    state = {'points': {}, 'stems': [], 'geo': kdtreemap.create(dimensions=2), 'steps_completed': 0}
+    state = {'points': {}, 'geo': kdtreemap.create(dimensions=2), 'steps_completed': 0}
     state = simulate_step(state, DROP_COUNT)
 
     stems = state['stems']
@@ -102,13 +102,13 @@ def visualize_init():
 
 
 def visualize_state(state):
-    stems = state['stems']
     points = state['points']
+    geo = state['geo']
 
     fig = plt.gcf()
     
-    plt.clf()
     ax = plt.gca()
+    ax.cla()
     fig.set_size_inches(12, 12)
     ax.axis('equal', adjustable='datalim')
     ax.set(xlim=(-1.5, 1.5), ylim=(-1.5, 1.5))
@@ -122,13 +122,16 @@ def visualize_state(state):
         if height_max is None or height > height_max:
             height_max = height
 
-    for stem in stems:
-        point_id = stem[-1]
+    for node in kdtreemap.level_order(geo):
+        assert node is not None
+        point_id = node.value
         point = points[point_id]
         coord = point['coord']
         height = point['height']
-        assert height + 1 == len(stem)
-        drop_artist = plt.Circle((coord[0], coord[1]), radius=DROP_RADIUS, fill=True, color=(height / height_max, 0, 0, 1))
+        color = (height / (height_max + 1))
+        if color > 1 or color < 0:
+            print('color: ', color)
+        drop_artist = plt.Circle((coord[0], coord[1]), radius=DROP_RADIUS, fill=True, color=(color, 0, 0, 1))
         ax.add_artist(drop_artist)
 
     plt.draw()
@@ -183,13 +186,12 @@ def _simulate_single_step(state):
     """Run a single step of the simulation on `state`, returning the next state."""
 
     # Recover the important parts of our state.
-    stems = state['stems']
     geo = state['geo']
     points = state['points']
     steps_completed = state['steps_completed']
 
-    if INTERACTIVE_FAST_MODE:
-        if steps_completed % 100 == 0:
+    if INTERACTIVE_FAST_MODE and len(points) != 0:
+        if steps_completed % 10 == 0:
             visualize_state(state)
 
     # Create a new drop in the plane.
@@ -228,7 +230,6 @@ def _simulate_single_step(state):
                     highest_point = point
                     highest_point_id = point_id
             drop_stem_intersect = True
-            assert points[highest_point['stem'][-1]]['coord'] == highest_point['coord']
 
         # Check if the drop bounces.
         if drop_stem_intersect and random_real() <= bounce_probability(bounce_count):
@@ -250,59 +251,46 @@ def _simulate_single_step(state):
                 # The drop has landed on top of an existing stem. Replace
                 # the top of the stem with the new drop.
                 if random_real() <= STEM_STICK_PROBABILITY:
-                    intersection_stem = highest_point['stem']
-                    assert len(intersection_stem) > 0
                     if INTERACTIVE_MODE:
                         unvisualize_drop(drop_artist)
                         drop_artist = visualize_drop(drop_coord)
                     if INTERACTIVE_MODE:
                         unvisualize_drop(highest_point['artist'])
                         #points[highest_point_id]['artist'] = visualize_drop(highest_point['coord'])
-                    geo.remove(points[intersection_stem[-1]]['coord'])
+                    #geo.remove(highest_point['coord'])
+                    assert drop_coord is not None
                     geo.add(drop_coord, value=steps_completed)
                     new_height = highest_point['height'] + 1
-                    intersection_stem.append(steps_completed)
-                    points[steps_completed] = {'height': new_height, 'artist': drop_artist, 'coord': drop_coord, 'stem': intersection_stem}
+                    points[steps_completed] = {'height': new_height, 'artist': drop_artist, 'coord': drop_coord}
             else:
                 # The drop has landed outside of any stem. Simply add
                 # it as a new stem.
                 if random_real() <= GROUND_STICK_PROBABILITY:
-                    assert steps_completed not in stems
                     # Create a new stem for this drop.
                     if INTERACTIVE_MODE:
                         unvisualize_drop(drop_artist)
                         drop_artist = visualize_drop(drop_coord)
-                    new_stem = [steps_completed]
-                    stems.append(new_stem)
+                    assert drop_coord is not None
                     geo.add(drop_coord, value=steps_completed)
-                    points[steps_completed] = {'height': 0, 'artist': drop_artist, 'coord': drop_coord, 'stem': new_stem}
+                    points[steps_completed] = {'height': 0, 'artist': drop_artist, 'coord': drop_coord}
                 elif INTERACTIVE_MODE:
                     unvisualize_drop(drop_artist)
 
+    return {'points': points, 'geo': geo, 'steps_completed': steps_completed + 1}
     # Melt stems from the bottom.
-    to_remove = set()
-    for i, stem in enumerate(stems):
-        assert stem
-        bottom_point_id = stem[0]
-        point = points[bottom_point_id]
-        if random_real() <= melt_probability(point['coord'][0], point['coord'][1]):
-            stem.pop(0)
-            height = point['height']
-            assert height == 0
-            geo.remove(point['coord'])
-            del points[bottom_point_id]
-            if not stem:
-                to_remove.add(i)
-                if INTERACTIVE_MODE:
-                    unvisualize_drop(point['artist'])
-            else:
-                for point_id in stem:
-                    points[point_id]['height'] -= 1
-                    assert points[point_id]['height'] >= 0
+    if len(points) != 0:
+        for node in kdtreemap.level_order(geo):
+            point_id = node.value
+            point = points[point_id]
+            if random_real() <= melt_probability(point['coord'][0], point['coord'][1]):
+                assert points[point_id]['height'] >= 0
+                points[point_id]['height'] -= 1
+                if points[point_id]['height'] < 0:
+                    geo.remove(point['coord'])
+                    if INTERACTIVE_MODE:
+                        unvisualize_drop(point['artist'])
 
-    stems = [s for i, s in enumerate(stems) if i not in to_remove]
-
-    return {'points': points, 'stems': stems, 'geo': geo, 'steps_completed': steps_completed + 1}
+    return {'points': points, 'geo': geo, 'steps_completed': steps_completed + 1}
 
 
 def print_stem(stem, points):
