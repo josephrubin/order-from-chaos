@@ -20,9 +20,9 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 20000
+DROP_COUNT = 200000
 # The radius of a drop.
-DROP_RADIUS = 0.1#0.05
+DROP_RADIUS = 0.05
 # The radius of a stem.
 STEM_RADIUS = DROP_RADIUS
 # The distance that a drop will bounce.
@@ -30,7 +30,7 @@ BOUNCE_DISTANCE = 0.2
 # The shape of this 2D plane.
 PLANE_SHAPE = DISK
 # The probability that any given stem will melt after a single simulation step.
-MELT_PROBABILITY = 0.1#0.0003
+MELT_PROBABILITY = 0#0.0003
 # The probability that a drop will stick to the ground.
 GROUND_STICK_PROBABILITY = 1#0.005
 # The probability that a drop will stick to a stem if it doesn't bounce.
@@ -41,9 +41,9 @@ PURGE_PROBABILITY = 0#0.0005
 # The minimum stem length to not be removed during a purge.
 PURGE_MINIMUM_STEM_LENGTH = 9
 # Run in interactive (draw-as-you-go) mode.
-INTERACTIVE_MODE = True
+INTERACTIVE_MODE = False
 # Delay between each draw in INTERACTIVE_MODE.
-INTERACTIVE_DELAY = 1#0.0001
+INTERACTIVE_DELAY = 0.0001
 
 
 # TODO: on intersection, add to highest one.
@@ -53,14 +53,14 @@ def bounce_probability(bounce_count):
     """Return the probability that a drop will bounce given that it
     has bounced `bounce_count` times already."""
     # TODO: allow bouncing
-    return 1 if bounce_count == 0 else 0
+    return 1 if bounce_count == 0 else 0.8
 
 
 def _main():
     """Run a 2D simulation of life. Chazelle is love. Chazelle is life."""
     visualize_init()
 
-    state = {'stems': {}, 'geo': kdtreemap.create(dimensions=2), 'steps_completed': 0}
+    state = {'points': {}, 'stems': [], 'geo': kdtreemap.create(dimensions=2), 'steps_completed': 0}
     state = simulate_step(state, DROP_COUNT)
     stems = state['stems']
     print('Number of stems: ', len(stems))
@@ -85,33 +85,29 @@ def visualize_init():
 
 def visualize_state(state):
     stems = state['stems']
-
-    plt.clf()
+    points = state['points']
 
     fig = plt.gcf()
     ax = plt.gca()
     
-    ax.cla() 
-    if PLANE_SHAPE == DISK: ax.add_artist(plt.Circle((0,0), radius=1, fill=False))
-    for stem in stems.values():
-        #if len(stem) < 15: continue
-        l = len(stem)
-        ll = min((l / 100), 1)
-        ll = 0.5
+    #plt.clf()
+    #ax.cla() 
 
-        ax.add_artist(plt.Circle((stem[0][0], stem[0][1]), radius=BOUNCE_DISTANCE, fill=False))
-        ax.add_artist(plt.Circle((stem[0][0], stem[0][1]), radius=STEM_RADIUS, fill=True, color=(ll, ll, ll)))
-        # plt.plot(circle)
+    for stem in stems:
+        point_id = stem[-1]
+        point = points[point_id]
+        coord = point['coord']
+        height = point['height']
+        drop_artist = plt.Circle((coord[0], coord[1]), radius=DROP_RADIUS, fill=True, color=(1, 0, 0, 0.1))
+        ax.add_artist(drop_artist)
+    #for point_id in points:
+    #    point = points[point_id]
+    #    coord = point['coord']
+    #    drop_artist = plt.Circle((coord[0], coord[1]), radius=DROP_RADIUS, fill=False)
+    #    ax.add_artist(drop_artist)
 
-    #plt.axis(xmin=0, xmax=1, ymin=0, ymax=1)
-    #plt.axis('equal')
-    #fname = sys.argv[1] + shape + str(count) + '-' + str(pstick1) + '-' + str(pmelt) + '-' + str(pstick2) + '-' + str(delta) + '-' + str(width) + '-' + str(numdrops) + '-' +  str(minStemLen) + '-' + str(hexa) + '.png'
-    #ax.set(xlim=(-1, 1))
-    ax.axis('equal', adjustable='datalim')
-    #plt.show()
     plt.draw()
-    plt.pause(0.0001)
-    #fig.savefig(fname)
+    plt.show()
 
 
 def visualize_drop(coords):
@@ -154,11 +150,13 @@ def _simulate_single_step(state):
     # Recover the important parts of our state.
     stems = state['stems']
     geo = state['geo']
+    points = state['points']
     steps_completed = state['steps_completed']
 
     # Create a new drop in the plane.
     drop_coord = random_coord(PLANE_SHAPE)
 
+    drop_artist = None
     if INTERACTIVE_MODE:
         drop_artist = visualize_drop_top(drop_coord)
 
@@ -176,21 +174,25 @@ def _simulate_single_step(state):
         if intersections:
             # The drop has intersected with some other drops that are already there.
             # Find the drop that is the highest up.
-            highest_stem = None
-            highest_node_height = None
-            highest_node = None
+            highest_point_height = None
+            highest_point = None
+            highest_point_id = None
             for node in intersections:
-                intersection_stem = node.value['stem']
-                intersection_height = node.value['height']
-                if highest_node_height is None or intersection_height > highest_node_height:
-                    highest_node_height = intersection_height
-                    highest_stem = intersection_stem
-                    highest_node = node
+                point_id = node.value
+                point = points[point_id]
+
+                assert node.data == point['coord']
+                
+                intersection_height = point['height']
+                if highest_point_height is None or intersection_height > highest_point_height:
+                    highest_point_height = intersection_height
+                    highest_point = point
+                    highest_point_id = point_id
             drop_stem_intersect = True
 
         # Check if the drop bounces.
         if drop_stem_intersect and random_real() <= bounce_probability(bounce_count):
-            assert highest_stem is not None
+            assert highest_point is not None
             if INTERACTIVE_MODE:
                 unvisualize_drop(drop_artist)
             # The drop bounces.
@@ -211,15 +213,17 @@ def _simulate_single_step(state):
                 # The drop has landed on top of an existing stem. Replace
                 # the top of the stem with the new drop.
                 if random_real() <= STEM_STICK_PROBABILITY:
-                    #print('intersected with stem: ', stems[stem_intersect_index])
-                    assert len(highest_stem) > 0
+                    intersection_stem = highest_point['stem']
+                    assert len(intersection_stem) > 0
                     if INTERACTIVE_MODE:
                         unvisualize_drop(drop_artist)
-                        unvisualize_drop(highest_node.value['artist'])
-                        highest_node.value['artist'] = visualize_drop(highest_node.data)
+                        unvisualize_drop(highest_point['artist'])
+                        points[highest_point_id]['artist'] = visualize_drop(highest_point['coord'])
                         drop_artist = visualize_drop_top(drop_coord)
-                    geo.add(drop_coord, value={'stem': highest_stem, 'height': highest_node_height + 1, 'artist': drop_artist})
-                    highest_stem.append({'coord': drop_coord, 'artist': drop_artist})
+                    geo.add(drop_coord, value=steps_completed)
+                    new_height = points[intersection_stem[-1]]['height'] + 1
+                    intersection_stem.append(steps_completed)
+                    points[steps_completed] = {'height': new_height, 'artist': drop_artist, 'coord': drop_coord, 'stem': intersection_stem}
                     #stems[stem_intersect_index].insert(0, drop_coord)
                     #stems[steps_completed] = stems[stem_intersect_index]
                     #del stems[stem_intersect_index]
@@ -229,28 +233,33 @@ def _simulate_single_step(state):
                 if random_real() <= GROUND_STICK_PROBABILITY:
                     assert steps_completed not in stems
                     # Create a new stem for this drop.
-                    new_stem = [{'coord': drop_coord, 'artist': drop_artist}]
-                    stems[steps_completed] = new_stem
-                    geo.add(drop_coord, value={'stem': new_stem, 'height': 0, 'artist': drop_artist})
+                    new_stem = [steps_completed]
+                    stems.append(new_stem)
+                    geo.add(drop_coord, value=steps_completed)
+                    points[steps_completed] = {'height': 0, 'artist': drop_artist, 'coord': drop_coord, 'stem': new_stem}
                 elif INTERACTIVE_MODE:
                     unvisualize_drop(drop_artist)
 
     # Melt stems from the bottom.
-    to_remove = []
-    for stem_key in stems:
-        stem = stems[stem_key]
+    to_remove = set()
+    for i, stem in enumerate(stems):
         assert stem
         if random_real() <= MELT_PROBABILITY:
-            print('MELT')
-            bottom_drop = stem.pop()
-            geo.remove(bottom_drop['coord'])
+            bottom_point_id = stem.pop(0)
+            point = points[bottom_point_id]
+            height = point['height']
+            assert height == 0
+            geo.remove(point['coord'])
             if not stem:
-                to_remove.append(stem_key)
+                to_remove.add(i)
+            else:
+                for point_id in stem:
+                    points[point_id]['height'] -= 1
+                    assert points[point_id]['height'] >= 0
             if INTERACTIVE_MODE:
-                unvisualize_drop(bottom_drop['artist'])
-    
-    for stem_key in to_remove:
-        del stems[stem_key]
+                unvisualize_drop(point['artist'])
+
+    stems = [s for i, s in enumerate(stems) if i not in to_remove]
 
     """
     # Melt stems from the bottom.
@@ -282,7 +291,13 @@ def _simulate_single_step(state):
     new_stems = {key: val for (key, val) in stems.items() if key not in to_delete}
     #new_stems = [stems[i] for i in range(len(stems)) if i not in to_delete]
     """
-    return {'stems': stems, 'geo': geo, 'steps_completed': steps_completed + 1}
+    return {'points': points, 'stems': stems, 'geo': geo, 'steps_completed': steps_completed + 1}
+
+
+def print_stem(stem, points):
+    for point_id in stem:
+        point = points[point_id]
+        print(point)
 
 
 def plotstems(stems):
