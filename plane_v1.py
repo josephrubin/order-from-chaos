@@ -21,9 +21,9 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 400000
+DROP_COUNT = 800000
 # The radius of a drop.
-DROP_RADIUS = 0.03
+DROP_RADIUS = 0.05
 # The radius of a stem.
 STEM_RADIUS = DROP_RADIUS
 # The distance that a drop will bounce.
@@ -31,13 +31,13 @@ BOUNCE_DISTANCE = 5 * DROP_RADIUS
 # The shape of this 2D plane.
 PLANE_SHAPE = DISK
 # The probability that any given stem will melt after a single simulation step.
-MELT_PROBABILITY = 0.02
+MELT_PROBABILITY = 0.03
 # The probability that a drop will stick to the ground.
-GROUND_STICK_PROBABILITY = 0.05
+GROUND_STICK_PROBABILITY = 1#0.05
 # The probability that a drop will stick to a stem if it doesn't bounce.
 STEM_STICK_PROBABILITY = 1
 # Run in interactive (draw-as-you-go) mode.
-INTERACTIVE_MODE = False
+INTERACTIVE_MODE = True
 # Delay between each draw in INTERACTIVE_MODE.
 INTERACTIVE_DELAY = 0.0000000000001
 #

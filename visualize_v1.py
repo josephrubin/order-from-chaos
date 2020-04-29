@@ -66,7 +66,9 @@ def _main():
         alert_bad_usage_and_abort()
 
     tri = scipy.spatial.Delaunay(stem_coords)
-    plt.triplot([p[0] for p in tri.points], [p[1] for p in tri.points], tri.simplices)
+    boundary_simplices = [i for i, _ in enumerate(tri.simplices) if -1 in tri.neighbors[i]]
+    simplices_left = [s for i, s in enumerate(tri.simplices) if i not in boundary_simplices]
+    plt.triplot([p[0] for p in tri.points], [p[1] for p in tri.points], simplices_left)
 
     plt.show()
 

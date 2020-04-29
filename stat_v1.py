@@ -50,6 +50,9 @@ def _main():
     state['stems'] = stems
 
     tri = scipy.spatial.Delaunay(stem_coords)
+    boundary_simplices = [i for i, _ in enumerate(tri.simplices) if -1 in tri.neighbors[i]]
+    simplices_left = [s for i, s in enumerate(tri.simplices) if i not in boundary_simplices]
+    tri.simplices = simplices_left
     tri_std = calculate_angle_stddev(tri, stem_coords)
 
     random_coords = []
@@ -57,12 +60,16 @@ def _main():
         random_coords.append(plane_v1.random_coord(settings['PLANE_SHAPE']))
 
     random_tri = scipy.spatial.Delaunay(random_coords)
+    boundary_simplices = [i for i, _ in enumerate(random_tri.simplices) if -1 in random_tri.neighbors[i]]
+    simplices_left = [s for i, s in enumerate(random_tri.simplices) if i not in boundary_simplices]
+    random_tri.simplices = simplices_left
     random_tri_std = calculate_angle_stddev(random_tri, random_coords)
 
     print('data angle stddev is', tri_std)
     print('{} point random stddev is'.format(len(state['stems'])), random_tri_std)
 
-    plt.triplot([p[0] for p in tri.points], [p[1] for p in tri.points], tri.simplices)
+    #plt.triplot([p[0] for p in tri.points], [p[1] for p in tri.points], tri.simplices)
+    plt.triplot([p[0] for p in random_tri.points], [p[1] for p in random_tri.points], random_tri.simplices)
     plt.show()
 
 
