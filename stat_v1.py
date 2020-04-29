@@ -13,6 +13,9 @@ from matplotlib import pyplot as plt
 import matplotlib
 from mpl_toolkits.mplot3d import Axes3D
 import scipy.spatial
+import numpy as np
+
+import plane_v1
 
 
 __author__ = "Jeremey Chizewer, Joseph Rubin"
@@ -34,15 +37,6 @@ def _main():
         data = json.loads(data_file.read())
         settings = data['settings']
         state = data['state']
-
-    # Find clusters.
-    #coords = [state['points'][point_id]['coord'] for point_id in state['points']]
-    #seen_points = set()
-    #geo = kdtreemap.create(coords)
-    #stack = []
-    #while stack
-
-    visualize_init(settings)
     
     stem_coords = []
     stems = []
@@ -55,20 +49,43 @@ def _main():
 
     state['stems'] = stems
 
-    if visualization == 'p':
-        visualize_state_points(state, settings)
-    elif visualization == 's':
-        visualize_state_stems(state, settings)
-    elif visualization == 'b':
-        visualize_state_points(state, settings)
-        visualize_state_stems(state, settings)
-    else:
-        alert_bad_usage_and_abort()
-
     tri = scipy.spatial.Delaunay(stem_coords)
-    plt.triplot([p[0] for p in tri.points], [p[1] for p in tri.points], tri.simplices)
+    tri_std = calculate_angle_stddev(tri, stem_coords)
 
+    random_coords = []
+    for i in range(len(state['stems'])):
+        random_coords.append(plane_v1.random_coord(settings['PLANE_SHAPE']))
+
+    random_tri = scipy.spatial.Delaunay(random_coords)
+    random_tri_std = calculate_angle_stddev(random_tri, random_coords)
+
+    print('data angle stddev is', tri_std)
+    print('{} point random stddev is'.format(len(state['stems'])), random_tri_std)
+
+    plt.triplot([p[0] for p in tri.points], [p[1] for p in tri.points], tri.simplices)
     plt.show()
+
+
+def calculate_angle_stddev(tri, from_coords):
+    angles = []
+    for simplex in tri.simplices:
+        a = from_coords[simplex[0]]
+        b = from_coords[simplex[1]]
+        c = from_coords[simplex[2]]
+        ang1 = calculate_angle(a, b, c)
+        ang2 = calculate_angle(c, a, b)
+        ang3 = calculate_angle(b, c, a)
+        angles.append(ang1)
+        angles.append(ang2)
+        angles.append(ang3)
+    return np.std(angles)
+
+
+def calculate_angle(a, b, c):
+    angle = abs(math.degrees(math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0])))
+    if angle > 180:
+        angle = 360 - angle
+    return angle
 
 
 def alert_bad_usage_and_abort():

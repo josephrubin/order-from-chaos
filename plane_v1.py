@@ -21,9 +21,9 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 2000000
+DROP_COUNT = 400000
 # The radius of a drop.
-DROP_RADIUS = 0.05
+DROP_RADIUS = 0.03
 # The radius of a stem.
 STEM_RADIUS = DROP_RADIUS
 # The distance that a drop will bounce.
@@ -31,7 +31,7 @@ BOUNCE_DISTANCE = 5 * DROP_RADIUS
 # The shape of this 2D plane.
 PLANE_SHAPE = DISK
 # The probability that any given stem will melt after a single simulation step.
-MELT_PROBABILITY = 0.1
+MELT_PROBABILITY = 0.02
 # The probability that a drop will stick to the ground.
 GROUND_STICK_PROBABILITY = 0.05
 # The probability that a drop will stick to a stem if it doesn't bounce.
@@ -41,13 +41,13 @@ INTERACTIVE_MODE = False
 # Delay between each draw in INTERACTIVE_MODE.
 INTERACTIVE_DELAY = 0.0000000000001
 #
-INTERACTIVE_FAST_MODE = True
+INTERACTIVE_FAST_MODE = False
 #
 INTERACTIVE_FAST_INTERVAL = 10000
 #
 BOUNCE_HEIGHT_ADDITION = 20
 #
-OLD_GENOME_BIAS = 30
+OLD_GENOME_BIAS = 35
 #
 SHOW_BOUNCE_RADIUS = True
 
@@ -67,8 +67,19 @@ def _main():
     """Run a 2D simulation of life. Chazelle is love. Chazelle is life."""
     visualize_init()
 
-    #visualize_random(50)
-    #exit(0)
+    # Output data:
+    settings = {
+        'DROP_COUNT': DROP_COUNT,
+        'DROP_RADIUS': DROP_RADIUS,
+        'STEM_RADIUS': STEM_RADIUS,
+        'BOUNCE_DISTANCE': BOUNCE_DISTANCE,
+        'PLANE_SHAPE': PLANE_SHAPE,
+        'MELT_PROBABILITY': MELT_PROBABILITY,
+        'GROUND_STICK_PROBABILITY': GROUND_STICK_PROBABILITY,
+        'STEM_STICK_PROBABILITY': STEM_STICK_PROBABILITY,
+        'INTERACTIVE_MODE': INTERACTIVE_MODE,
+        'INTERACTIVE_DELAY': INTERACTIVE_DELAY
+    }
 
     state = {'points': {}, 'geo': kdtreemap.create(dimensions=2), 'steps_completed': 0}
     """
@@ -103,19 +114,6 @@ def _main():
     print('Number of stems: ', len(stems), file=sys.stderr)
     print('Number of points: ', len(points), file=sys.stderr)
 
-    # Output data:
-    settings = {
-        'DROP_COUNT': DROP_COUNT,
-        'DROP_RADIUS': DROP_RADIUS,
-        'STEM_RADIUS': STEM_RADIUS,
-        'BOUNCE_DISTANCE': BOUNCE_DISTANCE,
-        'PLANE_SHAPE': PLANE_SHAPE,
-        'MELT_PROBABILITY': MELT_PROBABILITY,
-        'GROUND_STICK_PROBABILITY': GROUND_STICK_PROBABILITY,
-        'STEM_STICK_PROBABILITY': STEM_STICK_PROBABILITY,
-        'INTERACTIVE_MODE': INTERACTIVE_MODE,
-        'INTERACTIVE_DELAY': INTERACTIVE_DELAY
-    }
     _state = {'points': points, 'stems': stems}
     print(json.dumps({'settings': settings, 'state': _state}))
 
