@@ -21,17 +21,17 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 200000
+DROP_COUNT = 2000000
 # The radius of a drop.
 DROP_RADIUS = 0.05
 # The radius of a stem.
 STEM_RADIUS = DROP_RADIUS
 # The distance that a drop will bounce.
-BOUNCE_DISTANCE = 2 * DROP_RADIUS
+BOUNCE_DISTANCE = 5 * DROP_RADIUS
 # The shape of this 2D plane.
 PLANE_SHAPE = DISK
 # The probability that any given stem will melt after a single simulation step.
-MELT_PROBABILITY = 0.07
+MELT_PROBABILITY = 0.1
 # The probability that a drop will stick to the ground.
 GROUND_STICK_PROBABILITY = 0.05
 # The probability that a drop will stick to a stem if it doesn't bounce.
@@ -41,13 +41,13 @@ INTERACTIVE_MODE = False
 # Delay between each draw in INTERACTIVE_MODE.
 INTERACTIVE_DELAY = 0.0000000000001
 #
-INTERACTIVE_FAST_MODE = False
+INTERACTIVE_FAST_MODE = True
 #
-INTERACTIVE_FAST_INTERVAL = 1000
+INTERACTIVE_FAST_INTERVAL = 10000
 #
 BOUNCE_HEIGHT_ADDITION = 20
 #
-OLD_GENOME_BIAS = 3
+OLD_GENOME_BIAS = 30
 #
 SHOW_BOUNCE_RADIUS = True
 
@@ -67,6 +67,9 @@ def _main():
     """Run a 2D simulation of life. Chazelle is love. Chazelle is life."""
     visualize_init()
 
+    #visualize_random(50)
+    #exit(0)
+
     state = {'points': {}, 'geo': kdtreemap.create(dimensions=2), 'steps_completed': 0}
     """
     for i in range(1, 14):
@@ -82,8 +85,20 @@ def _main():
     """
     state = simulate_step(state, DROP_COUNT)
 
-    stems = state['stems']
+    geo = state['geo']
     points = state['points']
+
+    none_count = 0
+    stems = []
+    for node in kdtreemap.level_order(geo):
+        # Bug fix for empty root.
+        if node.data is None:
+            none_count += 1
+            assert none_count <= 1
+            break
+        assert node is not None
+        point_id = node.value
+        stems.append(point_id)
 
     print('Number of stems: ', len(stems), file=sys.stderr)
     print('Number of points: ', len(points), file=sys.stderr)
@@ -101,7 +116,7 @@ def _main():
         'INTERACTIVE_MODE': INTERACTIVE_MODE,
         'INTERACTIVE_DELAY': INTERACTIVE_DELAY
     }
-    _state = {'points': state['points'], 'stems': state['stems']}
+    _state = {'points': points, 'stems': stems}
     print(json.dumps({'settings': settings, 'state': _state}))
 
 
@@ -119,6 +134,32 @@ def visualize_init():
     #fname = sys.argv[1] + shape + str(count) + '-' + str(pstick1) + '-' + str(pmelt) + '-' + str(pstick2) + '-' + str(delta) + '-' + str(width) + '-' + str(numdrops) + '-' +  str(minStemLen) + '-' + str(hexa) + '.png'
     #ax.axis('equal')
     if PLANE_SHAPE == DISK: ax.add_artist(plt.Circle((0,0), radius=1, fill=False))
+
+
+def visualize_random(count=100):
+    fig = plt.gcf()
+    fig.clf()
+    
+    ax = plt.gca()
+    ax.cla()
+    fig.set_size_inches(12, 12)
+    ax.axis('equal', adjustable='datalim')
+    ax.set(xlim=(-1.5, 1.5), ylim=(-1.5, 1.5))
+
+    if PLANE_SHAPE == DISK: ax.add_artist(plt.Circle((0,0), radius=1, fill=False))
+
+    for _ in range(count):
+        coord = random_coord(PLANE_SHAPE)
+        drop_artist = plt.Circle((coord[0], coord[1]), radius=DROP_RADIUS, fill=True, color=(0, 0, 0, 1))
+        ax.add_artist(drop_artist)
+        if SHOW_BOUNCE_RADIUS:
+            bounce_artist_outer = plt.Circle((coord[0], coord[1]), radius=BOUNCE_DISTANCE + DROP_RADIUS*1, fill=False, color=(0, 0, 0, 1))
+            bounce_artist_inner = plt.Circle((coord[0], coord[1]), radius=BOUNCE_DISTANCE - DROP_RADIUS*1, fill=False, color=(0, 0, 0, 1))
+            ax.add_artist(bounce_artist_outer)
+            ax.add_artist(bounce_artist_inner)
+
+    plt.draw()
+    plt.show()
 
 
 def visualize_state(state):

@@ -12,6 +12,7 @@ import kdtreemap
 from matplotlib import pyplot as plt
 import matplotlib
 from mpl_toolkits.mplot3d import Axes3D
+import scipy.spatial
 
 
 __author__ = "Jeremey Chizewer, Joseph Rubin"
@@ -42,6 +43,7 @@ def _main():
     #while stack
 
 
+
     visualize_init(settings)
 
     if visualization == 'p':
@@ -53,6 +55,15 @@ def _main():
         visualize_state_stems(state, settings)
     else:
         alert_bad_usage_and_abort()
+
+    stem_coords = []
+    for point_id in state['stems']:
+        point = state['points'][str(point_id)]
+        stem_coords.append(point['coord'])
+
+    tri = scipy.spatial.Delaunay(stem_coords)
+    plt.triplot([p[0] for p in tri.points], [p[1] for p in tri.points], tri.simplices)
+
     plt.show()
 
 
@@ -109,12 +120,12 @@ def visualize_state_stems(state, settings):
         if height_max is None or height > height_max:
             height_max = height
 
-    for stem in stems:
-        point_id = stem[-1]
+    for point_id in stems:
         point = points[str(point_id)]
         coord = point['coord']
         height = point['height']
-        print(height)
+        if height < 40:
+            continue
         #point_id_bottom = stem[0]
         #point_bottom = points[str(point_id_bottom)]
         #coord_bottom = point_bottom['coord']
@@ -122,6 +133,10 @@ def visualize_state_stems(state, settings):
         #drop_artist_bottom = plt.Circle((coord_bottom[0], coord_bottom[1]), radius=settings['DROP_RADIUS'], fill=True, color=(0, 0, 1, 0.1))
         ax.add_artist(drop_artist)
         #ax.add_artist(drop_artist_bottom)
+        bounce_artist_outer = plt.Circle((coord[0], coord[1]), radius=settings['BOUNCE_DISTANCE'] + settings['DROP_RADIUS']*1, fill=False, color=(height / height_max, 0, 0, 1))
+        bounce_artist_inner = plt.Circle((coord[0], coord[1]), radius=settings['BOUNCE_DISTANCE'] - settings['DROP_RADIUS']*1, fill=False, color=(height / height_max, 0, 0, 1))
+        ax.add_artist(bounce_artist_outer)
+        ax.add_artist(bounce_artist_inner)
 
     plt.draw()
 
