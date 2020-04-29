@@ -27,21 +27,29 @@ DROP_RADIUS = 0.05
 # The radius of a stem.
 STEM_RADIUS = DROP_RADIUS
 # The distance that a drop will bounce.
-BOUNCE_DISTANCE = 6 * DROP_RADIUS
+BOUNCE_DISTANCE = 2 * DROP_RADIUS
 # The shape of this 2D plane.
 PLANE_SHAPE = DISK
 # The probability that any given stem will melt after a single simulation step.
-MELT_PROBABILITY = 0.003
+MELT_PROBABILITY = 0.07
 # The probability that a drop will stick to the ground.
-GROUND_STICK_PROBABILITY = 0.5
+GROUND_STICK_PROBABILITY = 0.05
 # The probability that a drop will stick to a stem if it doesn't bounce.
 STEM_STICK_PROBABILITY = 1
 # Run in interactive (draw-as-you-go) mode.
 INTERACTIVE_MODE = False
 # Delay between each draw in INTERACTIVE_MODE.
-INTERACTIVE_DELAY = 0.0000001
+INTERACTIVE_DELAY = 0.0000000000001
 #
-INTERACTIVE_FAST_MODE = True
+INTERACTIVE_FAST_MODE = False
+#
+INTERACTIVE_FAST_INTERVAL = 1000
+#
+BOUNCE_HEIGHT_ADDITION = 20
+#
+OLD_GENOME_BIAS = 3
+#
+SHOW_BOUNCE_RADIUS = True
 
 
 def bounce_probability(bounce_count):
@@ -60,6 +68,18 @@ def _main():
     visualize_init()
 
     state = {'points': {}, 'geo': kdtreemap.create(dimensions=2), 'steps_completed': 0}
+    """
+    for i in range(1, 14):
+        drop_coord = (-1 + BOUNCE_DISTANCE * i, 0)
+        drop_artist = visualize_drop(drop_coord)
+        state['geo'].add(drop_coord, value=-1000 + i)
+        state['points'][-1000 + i] = {'height': 20, 'artist': drop_artist, 'coord': drop_coord}
+    for i in range(1, 14):
+        drop_coord = (-1 + BOUNCE_DISTANCE * i + BOUNCE_DISTANCE / 2, BOUNCE_DISTANCE * math.sqrt(3) / 2)
+        drop_artist = visualize_drop(drop_coord)
+        state['geo'].add(drop_coord, value=-2000 + i)
+        state['points'][-2000 + i] = {'height': 20, 'artist': drop_artist, 'coord': drop_coord}
+    """
     state = simulate_step(state, DROP_COUNT)
 
     stems = state['stems']
@@ -106,6 +126,7 @@ def visualize_state(state):
     geo = state['geo']
 
     fig = plt.gcf()
+    fig.clf()
     
     ax = plt.gca()
     ax.cla()
@@ -122,7 +143,13 @@ def visualize_state(state):
         if height_max is None or height > height_max:
             height_max = height
 
+    none_count = 0
     for node in kdtreemap.level_order(geo):
+        # Bug fix for empty root.
+        if node.data is None:
+            none_count += 1
+            assert none_count <= 1
+            break
         assert node is not None
         point_id = node.value
         point = points[point_id]
@@ -133,6 +160,11 @@ def visualize_state(state):
             print('color: ', color)
         drop_artist = plt.Circle((coord[0], coord[1]), radius=DROP_RADIUS, fill=True, color=(color, 0, 0, 1))
         ax.add_artist(drop_artist)
+        if SHOW_BOUNCE_RADIUS:
+            bounce_artist_outer = plt.Circle((coord[0], coord[1]), radius=BOUNCE_DISTANCE + DROP_RADIUS*1, fill=False, color=(color, 0, 0, 1))
+            bounce_artist_inner = plt.Circle((coord[0], coord[1]), radius=BOUNCE_DISTANCE - DROP_RADIUS*1, fill=False, color=(color, 0, 0, 1))
+            ax.add_artist(bounce_artist_outer)
+            ax.add_artist(bounce_artist_inner)
 
     plt.draw()
     plt.pause(INTERACTIVE_DELAY)
@@ -191,7 +223,7 @@ def _simulate_single_step(state):
     steps_completed = state['steps_completed']
 
     if INTERACTIVE_FAST_MODE and len(points) != 0:
-        if steps_completed % 10 == 0:
+        if steps_completed % INTERACTIVE_FAST_INTERVAL == 0:
             visualize_state(state)
 
     # Create a new drop in the plane.
@@ -257,11 +289,13 @@ def _simulate_single_step(state):
                     if INTERACTIVE_MODE:
                         unvisualize_drop(highest_point['artist'])
                         #points[highest_point_id]['artist'] = visualize_drop(highest_point['coord'])
-                    #geo.remove(highest_point['coord'])
+                    geo = geo.remove(highest_point['coord'])
                     assert drop_coord is not None
-                    geo.add(drop_coord, value=steps_completed)
-                    new_height = highest_point['height'] + 1
-                    points[steps_completed] = {'height': new_height, 'artist': drop_artist, 'coord': drop_coord}
+                    new_coord = ((OLD_GENOME_BIAS * highest_point['coord'][0] + drop_coord[0]) / (1 + OLD_GENOME_BIAS),
+                                 (OLD_GENOME_BIAS * highest_point['coord'][1] + drop_coord[1]) / (1 + OLD_GENOME_BIAS))
+                    geo.add(new_coord, value=steps_completed)
+                    new_height = highest_point['height'] + 1 + BOUNCE_HEIGHT_ADDITION
+                    points[steps_completed] = {'height': new_height, 'artist': drop_artist, 'coord': new_coord}
             else:
                 # The drop has landed outside of any stem. Simply add
                 # it as a new stem.
@@ -276,19 +310,34 @@ def _simulate_single_step(state):
                 elif INTERACTIVE_MODE:
                     unvisualize_drop(drop_artist)
 
-    return {'points': points, 'geo': geo, 'steps_completed': steps_completed + 1}
     # Melt stems from the bottom.
+    to_remove = []
+    none_count = 0
     if len(points) != 0:
         for node in kdtreemap.level_order(geo):
+            # Bug fix for empty root.
+            if node.data is None:
+                none_count += 1
+                assert none_count <= 1
+                break
+
             point_id = node.value
+            #print('found', point_id)
             point = points[point_id]
             if random_real() <= melt_probability(point['coord'][0], point['coord'][1]):
+                if (points[point_id]['height'] < 0):
+                    print(points[point_id]['height'], point_id)
                 assert points[point_id]['height'] >= 0
                 points[point_id]['height'] -= 1
                 if points[point_id]['height'] < 0:
-                    geo.remove(point['coord'])
+                    #print('made one negative', point_id, points[point_id]['coord'])
+                    #geo = geo.remove(point['coord'])
+                    to_remove.append(point['coord'])
                     if INTERACTIVE_MODE:
                         unvisualize_drop(point['artist'])
+
+    for coord in to_remove:
+        geo = geo.remove(coord)
 
     return {'points': points, 'geo': geo, 'steps_completed': steps_completed + 1}
 
