@@ -38,23 +38,24 @@ def _main():
         settings = data['settings']
         state = data['state']
     
+    # Filter the stems if we would like to.
     stem_coords = []
     stems = []
     for point_id in state['stems']:
         point = state['points'][str(point_id)]
         height = point['height']
-        if height > 500:
-            stem_coords.append(point['coord'])
-            stems.append(point_id)
-
+        #if height > 500:
+        stem_coords.append(point['coord'])
+        stems.append(point_id)
     state['stems'] = stems
 
+    # Remove boundary simplices.
     tri = scipy.spatial.Delaunay(stem_coords)
     boundary_simplices = [i for i, _ in enumerate(tri.simplices) if -1 in tri.neighbors[i]]
     simplices_left = [s for i, s in enumerate(tri.simplices) if i not in boundary_simplices]
     tri.simplices = simplices_left
-    tri_std = calculate_angle_stddev(tri, stem_coords)
 
+    # Generate random points for comparison.
     random_coords = []
     for i in range(len(state['stems'])):
         random_coords.append(plane_v1.random_coord(settings['PLANE_SHAPE']))
@@ -63,14 +64,20 @@ def _main():
     boundary_simplices = [i for i, _ in enumerate(random_tri.simplices) if -1 in random_tri.neighbors[i]]
     simplices_left = [s for i, s in enumerate(random_tri.simplices) if i not in boundary_simplices]
     random_tri.simplices = simplices_left
-    random_tri_std = calculate_angle_stddev(random_tri, random_coords)
 
-    print('data angle stddev is', tri_std)
-    print('{} point random stddev is'.format(len(state['stems'])), random_tri_std)
+    tri_angle_std = calculate_angle_stddev(tri, stem_coords)
+    random_tri_angle_std = calculate_angle_stddev(random_tri, random_coords)
+    tri_side_length_std = calculate_side_length_stddev(tri, stem_coords)
+    random_tri_side_length_std = calculate_side_length_stddev(random_tri, random_coords)
+
+    print('stem angle stddev is', tri_angle_std)
+    print('{} point random angle stddev is'.format(len(state['stems'])), random_tri_angle_std)
+    print('stem side length stddev is', tri_side_length_std)
+    print('{} point random side length stddev is'.format(len(state['stems'])), random_tri_side_length_std)
 
     #plt.triplot([p[0] for p in tri.points], [p[1] for p in tri.points], tri.simplices)
-    plt.triplot([p[0] for p in random_tri.points], [p[1] for p in random_tri.points], random_tri.simplices)
-    plt.show()
+    #plt.triplot([p[0] for p in random_tri.points], [p[1] for p in random_tri.points], random_tri.simplices)
+    #plt.show()
 
 
 def calculate_angle_stddev(tri, from_coords):
@@ -86,6 +93,27 @@ def calculate_angle_stddev(tri, from_coords):
         angles.append(ang2)
         angles.append(ang3)
     return np.std(angles)
+
+
+def calculate_side_length_stddev(tri, from_coords):
+    side_lengths = []
+    for simplex in tri.simplices:
+        a = from_coords[simplex[0]]
+        b = from_coords[simplex[1]]
+        c = from_coords[simplex[2]]
+        side_length1 = euclidean_distance(a, b)
+        side_length2 = euclidean_distance(b, c)
+        side_length3 = euclidean_distance(c, a)
+        side_lengths.append(side_length1)
+        side_lengths.append(side_length2)
+        side_lengths.append(side_length3)
+    return np.std(side_lengths)
+
+
+def euclidean_distance(a, b):
+    dx = a[0] - b[0]
+    dy = a[1] - b[1]
+    return math.sqrt(dx * dx + dy * dy)
 
 
 def calculate_angle(a, b, c):
@@ -132,6 +160,17 @@ def visualize_state_points(state, settings):
         ax.add_artist(drop_artist)
 
     plt.draw()
+
+
+#temp
+def plot(coords):
+    visualize_init({'PLANE_SHAPE': 0})
+    fig = plt.gcf()
+    ax = plt.gca()
+    for coord in coords:
+        drop_artist = plt.Circle((coord[0], coord[1]), radius=0.05, fill=True, color=(0.5, 0, 0, 1))
+        ax.add_artist(drop_artist)
+    plt.show()
 
 
 def visualize_state_stems(state, settings):

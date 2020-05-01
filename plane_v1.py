@@ -21,7 +21,7 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 800000
+DROP_COUNT = 200000
 # The radius of a drop.
 DROP_RADIUS = 0.05
 # The radius of a stem.
@@ -33,13 +33,13 @@ PLANE_SHAPE = DISK
 # The probability that any given stem will melt after a single simulation step.
 MELT_PROBABILITY = 0.03
 # The probability that a drop will stick to the ground.
-GROUND_STICK_PROBABILITY = 1#0.05
+GROUND_STICK_PROBABILITY = 0.05
 # The probability that a drop will stick to a stem if it doesn't bounce.
 STEM_STICK_PROBABILITY = 1
 # Run in interactive (draw-as-you-go) mode.
-INTERACTIVE_MODE = True
+INTERACTIVE_MODE = False
 # Delay between each draw in INTERACTIVE_MODE.
-INTERACTIVE_DELAY = 0.0000000000001
+INTERACTIVE_DELAY = 0.01
 #
 INTERACTIVE_FAST_MODE = False
 #
@@ -114,8 +114,11 @@ def _main():
     print('Number of stems: ', len(stems), file=sys.stderr)
     print('Number of points: ', len(points), file=sys.stderr)
 
+    print('LEN', len(list(geo.inorder())))
+    #kdtreemap.visualize(geo, max_level=5)
+
     _state = {'points': points, 'stems': stems}
-    print(json.dumps({'settings': settings, 'state': _state}))
+    #print(json.dumps({'settings': settings, 'state': _state}))
 
 
 def visualize_init():
