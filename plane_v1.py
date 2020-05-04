@@ -23,7 +23,7 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 20000
+DROP_COUNT = 200000
 # The radius of a drop.
 DROP_RADIUS = 0.05
 # The radius of a stem.
@@ -43,7 +43,7 @@ INTERACTIVE_MODE = False
 # Delay between each draw in INTERACTIVE_MODE.
 INTERACTIVE_DELAY = 0.01
 #
-INTERACTIVE_FAST_MODE = False
+INTERACTIVE_FAST_MODE = True
 #
 INTERACTIVE_FAST_INTERVAL = 10000
 #
@@ -195,7 +195,7 @@ def visualize_state(state):
             assert none_count <= 1
             break
         assert node is not None
-        point_id = node.value
+        point_id = node.data.ident
         point = points[point_id]
         coord = point['coord']
         height = point['height']
