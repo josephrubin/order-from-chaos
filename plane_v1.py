@@ -8,10 +8,12 @@ import math
 from os import sys
 import random
 
-import kdtreemap
+import kdtree
 from matplotlib import pyplot as plt
 import matplotlib
 from mpl_toolkits.mplot3d import Axes3D
+
+from drop import Drop
 
 
 __author__ = "Jeremey Chizewer, Joseph Rubin"
@@ -21,7 +23,7 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 200000
+DROP_COUNT = 20000
 # The radius of a drop.
 DROP_RADIUS = 0.05
 # The radius of a stem.
@@ -55,7 +57,6 @@ SHOW_BOUNCE_RADIUS = True
 def bounce_probability(bounce_count):
     """Return the probability that a drop will bounce given that it
     has bounced `bounce_count` times already."""
-    # TODO: allow bouncing
     return 1 / (math.pow(2, bounce_count + 1))
 
 
@@ -64,6 +65,7 @@ def melt_probability(x, y):
 
 
 def _main():
+    random.seed(0)
     """Run a 2D simulation of life. Chazelle is love. Chazelle is life."""
     visualize_init()
 
@@ -81,7 +83,7 @@ def _main():
         'INTERACTIVE_DELAY': INTERACTIVE_DELAY
     }
 
-    state = {'points': {}, 'geo': kdtreemap.create(dimensions=2), 'steps_completed': 0}
+    state = {'points': {}, 'geo': kdtree.create(dimensions=2), 'steps_completed': 0}
     """
     for i in range(1, 14):
         drop_coord = (-1 + BOUNCE_DISTANCE * i, 0)
@@ -101,14 +103,14 @@ def _main():
 
     none_count = 0
     stems = []
-    for node in kdtreemap.level_order(geo):
+    for node in kdtree.level_order(geo):
         # Bug fix for empty root.
         if node.data is None:
             none_count += 1
             assert none_count <= 1
             break
         assert node is not None
-        point_id = node.value
+        point_id = node.data.ident
         stems.append(point_id)
 
     print('Number of stems: ', len(stems), file=sys.stderr)
@@ -118,7 +120,7 @@ def _main():
     #kdtreemap.visualize(geo, max_level=5)
 
     _state = {'points': points, 'stems': stems}
-    #print(json.dumps({'settings': settings, 'state': _state}))
+    print(json.dumps({'settings': settings, 'state': _state}))
 
 
 def visualize_init():
@@ -186,7 +188,7 @@ def visualize_state(state):
             height_max = height
 
     none_count = 0
-    for node in kdtreemap.level_order(geo):
+    for node in kdtree.level_order(geo):
         # Bug fix for empty root.
         if node.data is None:
             none_count += 1
@@ -293,10 +295,10 @@ def _simulate_single_step(state):
             highest_point = None
             highest_point_id = None
             for node in intersections:
-                point_id = node.value
+                point_id = node.ident
                 point = points[point_id]
 
-                assert node.data == point['coord']
+                assert node == point['coord']
                 
                 intersection_height = point['height']
                 if highest_point_height is None or intersection_height > highest_point_height:
@@ -335,7 +337,7 @@ def _simulate_single_step(state):
                     assert drop_coord is not None
                     new_coord = ((OLD_GENOME_BIAS * highest_point['coord'][0] + drop_coord[0]) / (1 + OLD_GENOME_BIAS),
                                  (OLD_GENOME_BIAS * highest_point['coord'][1] + drop_coord[1]) / (1 + OLD_GENOME_BIAS))
-                    geo.add(new_coord, value=steps_completed)
+                    geo.add(Drop(new_coord, ident=steps_completed))
                     new_height = highest_point['height'] + 1 + BOUNCE_HEIGHT_ADDITION
                     points[steps_completed] = {'height': new_height, 'artist': drop_artist, 'coord': new_coord}
             else:
@@ -347,7 +349,7 @@ def _simulate_single_step(state):
                         unvisualize_drop(drop_artist)
                         drop_artist = visualize_drop(drop_coord)
                     assert drop_coord is not None
-                    geo.add(drop_coord, value=steps_completed)
+                    geo.add(Drop(drop_coord, ident=steps_completed))
                     points[steps_completed] = {'height': 0, 'artist': drop_artist, 'coord': drop_coord}
                 elif INTERACTIVE_MODE:
                     unvisualize_drop(drop_artist)
@@ -356,15 +358,17 @@ def _simulate_single_step(state):
     to_remove = []
     none_count = 0
     if len(points) != 0:
-        for node in kdtreemap.level_order(geo):
+        for node in kdtree.level_order(geo):
             # Bug fix for empty root.
             if node.data is None:
                 none_count += 1
                 assert none_count <= 1
                 break
 
-            point_id = node.value
+            #print(type(node))
+            point_id = node.data.ident
             #print('found', point_id)
+            #print('data', node.data)
             point = points[point_id]
             if random_real() <= melt_probability(point['coord'][0], point['coord'][1]):
                 if (points[point_id]['height'] < 0):
@@ -375,11 +379,15 @@ def _simulate_single_step(state):
                     #print('made one negative', point_id, points[point_id]['coord'])
                     #geo = geo.remove(point['coord'])
                     to_remove.append(point['coord'])
+                    geo = geo.remove(point['coord'])
+                    node.deleted = True
                     if INTERACTIVE_MODE:
                         unvisualize_drop(point['artist'])
 
-    for coord in to_remove:
-        geo = geo.remove(coord)
+    #for coord in to_remove:
+    #    print('deleted', coord)
+
+    #kdtree.visualize(geo)
 
     return {'points': points, 'geo': geo, 'steps_completed': steps_completed + 1}
 
