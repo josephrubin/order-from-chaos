@@ -23,7 +23,7 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 200000
+DROP_COUNT = 2000000
 # The radius of a drop.
 DROP_RADIUS = 0.05
 # The radius of a stem.
@@ -33,7 +33,7 @@ BOUNCE_DISTANCE = 5 * DROP_RADIUS
 # The shape of this 2D plane.
 PLANE_SHAPE = DISK
 # The probability that any given stem will melt after a single simulation step.
-MELT_PROBABILITY = 0.03
+MELT_PROBABILITY = 0.105
 # The probability that a drop will stick to the ground.
 GROUND_STICK_PROBABILITY = 0.05
 # The probability that a drop will stick to a stem if it doesn't bounce.
@@ -49,9 +49,9 @@ INTERACTIVE_FAST_INTERVAL = 10000
 #
 BOUNCE_HEIGHT_ADDITION = 20
 #
-OLD_GENOME_BIAS = 35
+OLD_GENOME_BIAS = 40
 #
-SHOW_BOUNCE_RADIUS = True
+SHOW_BOUNCE_RADIUS = False
 
 
 def bounce_probability(bounce_count):
@@ -65,7 +65,7 @@ def melt_probability(x, y):
 
 
 def _main():
-    random.seed(0)
+    #random.seed(0)
     """Run a 2D simulation of life. Chazelle is love. Chazelle is life."""
     visualize_init()
 
@@ -80,7 +80,9 @@ def _main():
         'GROUND_STICK_PROBABILITY': GROUND_STICK_PROBABILITY,
         'STEM_STICK_PROBABILITY': STEM_STICK_PROBABILITY,
         'INTERACTIVE_MODE': INTERACTIVE_MODE,
-        'INTERACTIVE_DELAY': INTERACTIVE_DELAY
+        'INTERACTIVE_DELAY': INTERACTIVE_DELAY,
+        'OLD_GENOME_BIAS': OLD_GENOME_BIAS,
+        'BOUNCE_HEIGHT_ADDITION': BOUNCE_HEIGHT_ADDITION
     }
 
     state = {'points': {}, 'geo': kdtree.create(dimensions=2), 'steps_completed': 0}
