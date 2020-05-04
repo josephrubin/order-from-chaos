@@ -6,3 +6,5 @@ ev
 
 # Data
 data/
+
+__pycache__/

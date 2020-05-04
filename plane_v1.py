@@ -15,6 +15,8 @@ from mpl_toolkits.mplot3d import Axes3D
 
 from drop import Drop
 
+import cProfile
+
 
 __author__ = "Jeremey Chizewer, Joseph Rubin"
 
@@ -23,7 +25,7 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 2000000
+DROP_COUNT = 20000
 # The radius of a drop.
 DROP_RADIUS = 0.05
 # The radius of a stem.
@@ -35,7 +37,7 @@ PLANE_SHAPE = DISK
 # The probability that any given stem will melt after a single simulation step.
 MELT_PROBABILITY = 0.105
 # The probability that a drop will stick to the ground.
-GROUND_STICK_PROBABILITY = 0.05
+GROUND_STICK_PROBABILITY = 0.5#0.05
 # The probability that a drop will stick to a stem if it doesn't bounce.
 STEM_STICK_PROBABILITY = 1
 # Run in interactive (draw-as-you-go) mode.
@@ -43,7 +45,7 @@ INTERACTIVE_MODE = False
 # Delay between each draw in INTERACTIVE_MODE.
 INTERACTIVE_DELAY = 0.01
 #
-INTERACTIVE_FAST_MODE = True
+INTERACTIVE_FAST_MODE = False
 #
 INTERACTIVE_FAST_INTERVAL = 10000
 #
@@ -60,12 +62,8 @@ def bounce_probability(bounce_count):
     return 1 / (math.pow(2, bounce_count + 1))
 
 
-def melt_probability(x, y):
-    return MELT_PROBABILITY
-
-
 def _main():
-    #random.seed(0)
+    random.seed(0)
     """Run a 2D simulation of life. Chazelle is love. Chazelle is life."""
     visualize_init()
 
@@ -118,7 +116,7 @@ def _main():
     print('Number of stems: ', len(stems), file=sys.stderr)
     print('Number of points: ', len(points), file=sys.stderr)
 
-    print('LEN', len(list(geo.inorder())))
+    #print('LEN', len(list(geo.inorder())))
     #kdtreemap.visualize(geo, max_level=5)
 
     _state = {'points': points, 'stems': stems}
@@ -268,6 +266,10 @@ def _simulate_single_step(state):
     points = state['points']
     steps_completed = state['steps_completed']
 
+    if len(points) != 0 and steps_completed % 500 == 0 and geo.data is not None:
+        #pass
+        geo = geo.rebalance()
+
     if INTERACTIVE_FAST_MODE and len(points) != 0:
         if steps_completed % INTERACTIVE_FAST_INTERVAL == 0:
             visualize_state(state)
@@ -372,7 +374,7 @@ def _simulate_single_step(state):
             #print('found', point_id)
             #print('data', node.data)
             point = points[point_id]
-            if random_real() <= melt_probability(point['coord'][0], point['coord'][1]):
+            if random_real() <= MELT_PROBABILITY:
                 if (points[point_id]['height'] < 0):
                     print(points[point_id]['height'], point_id)
                 assert points[point_id]['height'] >= 0
@@ -466,4 +468,5 @@ def polar_to_cartesian(radial, theta):
 
 
 if __name__ == '__main__':
+    #cProfile.run('_main()')
     _main()
