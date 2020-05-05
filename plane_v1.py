@@ -12,6 +12,7 @@ import kdtree
 from matplotlib import pyplot as plt
 import matplotlib
 from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
 
 from drop import Drop
 
@@ -25,7 +26,7 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 20000
+DROP_COUNT = 200000
 # The radius of a drop.
 DROP_RADIUS = 0.05
 # The radius of a stem.
@@ -54,6 +55,8 @@ BOUNCE_HEIGHT_ADDITION = 20
 OLD_GENOME_BIAS = 40
 #
 SHOW_BOUNCE_RADIUS = False
+#
+MELT_INTERVAL = 10
 
 
 def bounce_probability(bounce_count):
@@ -63,8 +66,7 @@ def bounce_probability(bounce_count):
 
 
 def _main():
-    random.seed(0)
-    """Run a 2D simulation of life. Chazelle is love. Chazelle is life."""
+    """Run a 2D simulation of life."""
     visualize_init()
 
     # Output data:
@@ -267,7 +269,6 @@ def _simulate_single_step(state):
     steps_completed = state['steps_completed']
 
     if len(points) != 0 and steps_completed % 500 == 0 and geo.data is not None:
-        #pass
         geo = geo.rebalance()
 
     if INTERACTIVE_FAST_MODE and len(points) != 0:
@@ -358,6 +359,18 @@ def _simulate_single_step(state):
                 elif INTERACTIVE_MODE:
                     unvisualize_drop(drop_artist)
 
+    new_state = {'points': points, 'geo': geo, 'steps_completed': steps_completed}
+    if steps_completed % MELT_INTERVAL == 0:
+        new_state = melt(new_state)
+
+    return {'points': new_state['points'], 'geo': new_state['geo'], 'steps_completed': new_state['steps_completed'] + 1}
+
+
+def melt(state):
+    steps_completed = state['steps_completed']
+    geo = state['geo']
+    points = state['points']
+
     # Melt stems from the bottom.
     to_remove = []
     none_count = 0
@@ -374,11 +387,16 @@ def _simulate_single_step(state):
             #print('found', point_id)
             #print('data', node.data)
             point = points[point_id]
-            if random_real() <= MELT_PROBABILITY:
+
+            binom_prob = np.random.binomial(MELT_INTERVAL, MELT_PROBABILITY) / MELT_INTERVAL
+            #print(binom_prob)
+            #print(random_real(), binom * 0.01)
+            #if random_real() <= binom * 0.01:
+            if random_real() <= binom_prob:#MELT_PROBABILITY:
                 if (points[point_id]['height'] < 0):
                     print(points[point_id]['height'], point_id)
                 assert points[point_id]['height'] >= 0
-                points[point_id]['height'] -= 1
+                points[point_id]['height'] -= MELT_INTERVAL
                 if points[point_id]['height'] < 0:
                     #print('made one negative', point_id, points[point_id]['coord'])
                     #geo = geo.remove(point['coord'])
@@ -388,46 +406,10 @@ def _simulate_single_step(state):
                     if INTERACTIVE_MODE:
                         unvisualize_drop(point['artist'])
 
-    #for coord in to_remove:
-    #    print('deleted', coord)
-
-    #kdtree.visualize(geo)
-
-    return {'points': points, 'geo': geo, 'steps_completed': steps_completed + 1}
+    return {'points': points, 'geo': geo, 'steps_completed': steps_completed}
 
 
-def print_stem(stem, points):
-    for point_id in stem:
-        point = points[point_id]
-        print(point)
-
-
-def plotstems(stems):
-    plt.clf()
-    for stem in stems:
-        plt.plot([i[0] for i in stem], [i[1] for i in stem], marker='.')
-    plt.axis(xmin=0, xmax=1, ymin=0, ymax=1)
-    plt.draw()
-    plt.pause(0.01)
-
-
-def plotstemtops(stems, width, delta):
-    # fig = plt.gcf()
-    ax = plt.gca()
-    ax.cla() 
-    plt.axis(xmin=0, xmax=1, ymin=0, ymax=1)
-    plt.axis('equal')
-    for stem in stems:
-        for i in stem:
-            ax.plot(i[0], i[1], marker='.')
-        ax.plot(stem[-1][0], stem[-1][1], marker='.')
-        ax.add_artist(plt.Circle((stem[-1][0], stem[-1][1]), radius=delta, fill=False))
-        ax.add_artist(plt.Circle((stem[-1][0], stem[-1][1]), radius=width, fill=False, color='r'))
-    plt.show()
-    # plt.pause(0.01)
-
-
-# todo: put the below in separate files.
+# Geometric primitives. ------------------------------------------------------------
 
 
 def circle_circle_intersect(center_coord_a, center_coord_b, radius_a, radius_b):
