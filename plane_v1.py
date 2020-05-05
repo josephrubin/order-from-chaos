@@ -26,7 +26,7 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 200000
+DROP_COUNT = 20000
 # The radius of a drop.
 DROP_RADIUS = 0.05
 # The radius of a stem.
@@ -36,7 +36,7 @@ BOUNCE_DISTANCE = 5 * DROP_RADIUS
 # The shape of this 2D plane.
 PLANE_SHAPE = DISK
 # The probability that any given stem will melt after a single simulation step.
-MELT_PROBABILITY = 0.105
+MELT_PROBABILITY = 0.03
 # The probability that a drop will stick to the ground.
 GROUND_STICK_PROBABILITY = 0.5#0.05
 # The probability that a drop will stick to a stem if it doesn't bounce.
@@ -360,8 +360,8 @@ def _simulate_single_step(state):
                     unvisualize_drop(drop_artist)
 
     new_state = {'points': points, 'geo': geo, 'steps_completed': steps_completed}
-    if steps_completed % MELT_INTERVAL == 0:
-        new_state = melt(new_state)
+    #if steps_completed % MELT_INTERVAL == 0:
+    new_state = melt(new_state)
 
     return {'points': new_state['points'], 'geo': new_state['geo'], 'steps_completed': new_state['steps_completed'] + 1}
 
@@ -392,11 +392,11 @@ def melt(state):
             #print(binom_prob)
             #print(random_real(), binom * 0.01)
             #if random_real() <= binom * 0.01:
-            if random_real() <= binom_prob:#MELT_PROBABILITY:
+            if random_real() <= MELT_PROBABILITY:#binom_prob:#MELT_PROBABILITY:
                 if (points[point_id]['height'] < 0):
                     print(points[point_id]['height'], point_id)
                 assert points[point_id]['height'] >= 0
-                points[point_id]['height'] -= MELT_INTERVAL
+                points[point_id]['height'] -= 1#MELT_INTERVAL
                 if points[point_id]['height'] < 0:
                     #print('made one negative', point_id, points[point_id]['coord'])
                     #geo = geo.remove(point['coord'])
