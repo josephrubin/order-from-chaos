@@ -57,7 +57,7 @@ OLD_GENOME_BIAS = 40
 #
 SHOW_BOUNCE_RADIUS = False
 #
-MELT_INTERVAL = 10
+MELT_INTERVAL = 30
 #
 PERIODIC_BOUNDARY = False
 
@@ -294,7 +294,7 @@ def _simulate_single_step(state):
     points = state['points']
     steps_completed = state['steps_completed']
 
-    if len(points) != 0 and steps_completed % 500 == 0 and geo.data is not None:
+    if len(points) != 0 and steps_completed % 600 == 0 and geo.data is not None:
         geo = geo.rebalance()
 
     if INTERACTIVE_FAST_MODE and len(points) != 0:
