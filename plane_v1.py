@@ -11,6 +11,7 @@ import random
 import kdtree
 from matplotlib import pyplot as plt
 import matplotlib
+import matplotlib.patches
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
@@ -26,9 +27,9 @@ DISK = 0
 SQUARE = 1
 
 # The number of drops to generate.
-DROP_COUNT = 20000
+DROP_COUNT = 1000000
 # The radius of a drop.
-DROP_RADIUS = 0.05
+DROP_RADIUS = 0.03
 # The radius of a stem.
 STEM_RADIUS = DROP_RADIUS
 # The distance that a drop will bounce.
@@ -38,17 +39,17 @@ PLANE_SHAPE = DISK
 # The probability that any given stem will melt after a single simulation step.
 MELT_PROBABILITY = 0.03
 # The probability that a drop will stick to the ground.
-GROUND_STICK_PROBABILITY = 0.5#0.05
+GROUND_STICK_PROBABILITY = 0.05
 # The probability that a drop will stick to a stem if it doesn't bounce.
 STEM_STICK_PROBABILITY = 1
 # Run in interactive (draw-as-you-go) mode.
 INTERACTIVE_MODE = False
 # Delay between each draw in INTERACTIVE_MODE.
-INTERACTIVE_DELAY = 0.01
+INTERACTIVE_DELAY = 0.2
 #
 INTERACTIVE_FAST_MODE = False
 #
-INTERACTIVE_FAST_INTERVAL = 10000
+INTERACTIVE_FAST_INTERVAL = 20000
 #
 BOUNCE_HEIGHT_ADDITION = 20
 #
@@ -57,6 +58,8 @@ OLD_GENOME_BIAS = 40
 SHOW_BOUNCE_RADIUS = False
 #
 MELT_INTERVAL = 10
+#
+PERIODIC_BOUNDARY = False
 
 
 def bounce_probability(bounce_count):
@@ -82,7 +85,9 @@ def _main():
         'INTERACTIVE_MODE': INTERACTIVE_MODE,
         'INTERACTIVE_DELAY': INTERACTIVE_DELAY,
         'OLD_GENOME_BIAS': OLD_GENOME_BIAS,
-        'BOUNCE_HEIGHT_ADDITION': BOUNCE_HEIGHT_ADDITION
+        'BOUNCE_HEIGHT_ADDITION': BOUNCE_HEIGHT_ADDITION,
+        'MELT_INTERVAL': MELT_INTERVAL,
+        'PERIODIC_BOUNDARY': PERIODIC_BOUNDARY
     }
 
     state = {'points': {}, 'geo': kdtree.create(dimensions=2), 'steps_completed': 0}
@@ -139,6 +144,9 @@ def visualize_init():
     #fname = sys.argv[1] + shape + str(count) + '-' + str(pstick1) + '-' + str(pmelt) + '-' + str(pstick2) + '-' + str(delta) + '-' + str(width) + '-' + str(numdrops) + '-' +  str(minStemLen) + '-' + str(hexa) + '.png'
     #ax.axis('equal')
     if PLANE_SHAPE == DISK: ax.add_artist(plt.Circle((0,0), radius=1, fill=False))
+    elif PLANE_SHAPE == SQUARE:
+        border = matplotlib.patches.Rectangle((-1, -1), 2, 2, fill=False)
+        ax.add_patch(border)
 
 
 def visualize_random(count=100):
@@ -167,20 +175,36 @@ def visualize_random(count=100):
     plt.show()
 
 
+fucked_actors = []
 def visualize_state(state):
+    global fucked_actors
+    for artist in fucked_actors:
+        artist.remove()
+    fucked_actors = []
+
     points = state['points']
     geo = state['geo']
 
     fig = plt.gcf()
-    fig.clf()
+    
+    #fig.clf()
     
     ax = plt.gca()
+    """
     ax.cla()
     fig.set_size_inches(12, 12)
     ax.axis('equal', adjustable='datalim')
     ax.set(xlim=(-1.5, 1.5), ylim=(-1.5, 1.5))
+    """
 
-    if PLANE_SHAPE == DISK: ax.add_artist(plt.Circle((0,0), radius=1, fill=False))
+    if PLANE_SHAPE == DISK:
+        border = plt.Circle((0,0), radius=1, fill=False)
+        ax.add_artist(border)
+        fucked_actors.append(border)
+    elif PLANE_SHAPE == SQUARE:
+        border = matplotlib.patches.Rectangle((-1, -1), 2, 2, fill=False)
+        ax.add_patch(border)
+        fucked_actors.append(border)
 
     height_max = None
     for point_id in points:
@@ -201,11 +225,12 @@ def visualize_state(state):
         point = points[point_id]
         coord = point['coord']
         height = point['height']
+        if height < 0.5 * height_max:
+            continue
         color = (height / (height_max + 1))
-        if color > 1 or color < 0:
-            print('color: ', color)
         drop_artist = plt.Circle((coord[0], coord[1]), radius=DROP_RADIUS, fill=True, color=(color, 0, 0, 1))
         ax.add_artist(drop_artist)
+        fucked_actors.append(drop_artist)
         if SHOW_BOUNCE_RADIUS:
             bounce_artist_outer = plt.Circle((coord[0], coord[1]), radius=BOUNCE_DISTANCE + DROP_RADIUS*1, fill=False, color=(color, 0, 0, 1))
             bounce_artist_inner = plt.Circle((coord[0], coord[1]), radius=BOUNCE_DISTANCE - DROP_RADIUS*1, fill=False, color=(color, 0, 0, 1))
@@ -213,6 +238,7 @@ def visualize_state(state):
             ax.add_artist(bounce_artist_inner)
 
     plt.draw()
+    #plt.savefig("gallery1/{}.png".format(state['steps_completed']))
     plt.pause(INTERACTIVE_DELAY)
 
 
@@ -293,6 +319,23 @@ def _simulate_single_step(state):
 
         # Search the tree for any drop intersections.
         intersections = geo.search_nn_dist(drop_coord, (DROP_RADIUS + STEM_RADIUS) * (DROP_RADIUS + STEM_RADIUS))
+        if PERIODIC_BOUNDARY:
+            drop_coord2 = (drop_coord[0] + 2, drop_coord[1])
+            drop_coord3 = (drop_coord[0] - 2, drop_coord[1])
+            drop_coord4 = (drop_coord[0], drop_coord[1] + 2)
+            drop_coord5 = (drop_coord[0], drop_coord[1] - 2)
+            drop_coord6 = (drop_coord[0] + 2, drop_coord[1] + 2)
+            drop_coord7 = (drop_coord[0] + 2, drop_coord[1] - 2)
+            drop_coord8 = (drop_coord[0] - 2, drop_coord[1] + 2)
+            drop_coord9 = (drop_coord[0] - 2, drop_coord[1] - 2)
+            intersections.extend(geo.search_nn_dist(drop_coord2, (DROP_RADIUS + STEM_RADIUS) * (DROP_RADIUS + STEM_RADIUS)))
+            intersections.extend(geo.search_nn_dist(drop_coord3, (DROP_RADIUS + STEM_RADIUS) * (DROP_RADIUS + STEM_RADIUS)))
+            intersections.extend(geo.search_nn_dist(drop_coord4, (DROP_RADIUS + STEM_RADIUS) * (DROP_RADIUS + STEM_RADIUS)))
+            intersections.extend(geo.search_nn_dist(drop_coord5, (DROP_RADIUS + STEM_RADIUS) * (DROP_RADIUS + STEM_RADIUS)))
+            intersections.extend(geo.search_nn_dist(drop_coord6, (DROP_RADIUS + STEM_RADIUS) * (DROP_RADIUS + STEM_RADIUS)))
+            intersections.extend(geo.search_nn_dist(drop_coord7, (DROP_RADIUS + STEM_RADIUS) * (DROP_RADIUS + STEM_RADIUS)))
+            intersections.extend(geo.search_nn_dist(drop_coord8, (DROP_RADIUS + STEM_RADIUS) * (DROP_RADIUS + STEM_RADIUS)))
+            intersections.extend(geo.search_nn_dist(drop_coord9, (DROP_RADIUS + STEM_RADIUS) * (DROP_RADIUS + STEM_RADIUS)))
         if intersections:
             # The drop has intersected with some other drops that are already there.
             # Find the drop that is the highest up.
@@ -322,7 +365,20 @@ def _simulate_single_step(state):
             bounce_angle = random_theta()
             bounce_offset = polar_to_cartesian(BOUNCE_DISTANCE, bounce_angle)
             #drop_coord = (drop_coord[0] + bounce_offset[0], drop_coord[1] + bounce_offset[1])
-            drop_coord = (highest_point['coord'][0] + bounce_offset[0], highest_point['coord'][1] + bounce_offset[1])
+            if PERIODIC_BOUNDARY:
+                drop_coord = [highest_point['coord'][0] + bounce_offset[0], highest_point['coord'][1] + bounce_offset[1]]
+                if drop_coord[0] > 1:
+                    drop_coord[0] -= 2
+                if drop_coord[1] > 1:
+                    drop_coord[1] -= 2
+                if drop_coord[0] < -1:
+                    drop_coord[0] += 2
+                if drop_coord[1] < -1:
+                    drop_coord[1] += 2
+                drop_coord = tuple(drop_coord)
+            else:
+                drop_coord = (highest_point['coord'][0] + bounce_offset[0], highest_point['coord'][1] + bounce_offset[1])
+
             if INTERACTIVE_MODE:
                 drop_artist = visualize_drop_bounce(drop_coord)
         else:
@@ -360,8 +416,8 @@ def _simulate_single_step(state):
                     unvisualize_drop(drop_artist)
 
     new_state = {'points': points, 'geo': geo, 'steps_completed': steps_completed}
-    #if steps_completed % MELT_INTERVAL == 0:
-    new_state = melt(new_state)
+    if steps_completed % MELT_INTERVAL == 0:
+        new_state = melt(new_state)
 
     return {'points': new_state['points'], 'geo': new_state['geo'], 'steps_completed': new_state['steps_completed'] + 1}
 
@@ -388,23 +444,21 @@ def melt(state):
             #print('data', node.data)
             point = points[point_id]
 
-            binom_prob = np.random.binomial(MELT_INTERVAL, MELT_PROBABILITY) / MELT_INTERVAL
+            binom_melt_amount = np.random.binomial(MELT_INTERVAL, MELT_PROBABILITY)
             #print(binom_prob)
-            #print(random_real(), binom * 0.01)
-            #if random_real() <= binom * 0.01:
-            if random_real() <= MELT_PROBABILITY:#binom_prob:#MELT_PROBABILITY:
-                if (points[point_id]['height'] < 0):
-                    print(points[point_id]['height'], point_id)
-                assert points[point_id]['height'] >= 0
-                points[point_id]['height'] -= 1#MELT_INTERVAL
-                if points[point_id]['height'] < 0:
-                    #print('made one negative', point_id, points[point_id]['coord'])
-                    #geo = geo.remove(point['coord'])
-                    to_remove.append(point['coord'])
-                    geo = geo.remove(point['coord'])
-                    node.deleted = True
-                    if INTERACTIVE_MODE:
-                        unvisualize_drop(point['artist'])
+
+            if (points[point_id]['height'] < 0):
+                print(points[point_id]['height'], point_id)
+            assert points[point_id]['height'] >= 0
+            points[point_id]['height'] -= binom_melt_amount
+            if points[point_id]['height'] < 0:
+                #print('made one negative', point_id, points[point_id]['coord'])
+                #geo = geo.remove(point['coord'])
+                to_remove.append(point['coord'])
+                geo = geo.remove(point['coord'])
+                node.deleted = True
+                if INTERACTIVE_MODE:
+                    unvisualize_drop(point['artist'])
 
     return {'points': points, 'geo': geo, 'steps_completed': steps_completed}
 
@@ -429,7 +483,7 @@ def random_coord(shape):
         radial = math.sqrt(random_real())
         return polar_to_cartesian(radial, theta)
     elif shape == SQUARE:
-        return (random_real(), random_real())
+        return (random_real() * 2 - 1, random_real() * 2 - 1)
     else:
         raise ValueError('Illegal value for `shape`.')
 

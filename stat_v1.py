@@ -39,21 +39,29 @@ def _main():
         state = data['state']
     
     # Filter the stems if we would like to.
+    heights = []
+    for point_id in state['stems']:
+        point = state['points'][str(point_id)]
+        height = point['height']
+        heights.append(height)
+    max_height = max(heights)
+
     stem_coords = []
     stems = []
     for point_id in state['stems']:
         point = state['points'][str(point_id)]
         height = point['height']
-        #if height > 500:
-        stem_coords.append(point['coord'])
-        stems.append(point_id)
+        if height > max_height * 0.5:
+            stem_coords.append(point['coord'])
+            stems.append(point_id)
+
     state['stems'] = stems
 
     # Remove boundary simplices.
     tri = scipy.spatial.Delaunay(stem_coords)
-    boundary_simplices = [i for i, _ in enumerate(tri.simplices) if -1 in tri.neighbors[i]]
-    simplices_left = [s for i, s in enumerate(tri.simplices) if i not in boundary_simplices]
-    tri.simplices = simplices_left
+    #boundary_simplices = [i for i, _ in enumerate(tri.simplices) if -1 in tri.neighbors[i]]
+    #simplices_left = [s for i, s in enumerate(tri.simplices) if i not in boundary_simplices]
+    #tri.simplices = simplices_left
 
     # Generate random points for comparison.
     random_coords = []
@@ -61,9 +69,9 @@ def _main():
         random_coords.append(plane_v1.random_coord(settings['PLANE_SHAPE']))
 
     random_tri = scipy.spatial.Delaunay(random_coords)
-    boundary_simplices = [i for i, _ in enumerate(random_tri.simplices) if -1 in random_tri.neighbors[i]]
-    simplices_left = [s for i, s in enumerate(random_tri.simplices) if i not in boundary_simplices]
-    random_tri.simplices = simplices_left
+    #boundary_simplices = [i for i, _ in enumerate(random_tri.simplices) if -1 in random_tri.neighbors[i]]
+    #simplices_left = [s for i, s in enumerate(random_tri.simplices) if i not in boundary_simplices]
+    #random_tri.simplices = simplices_left
 
     tri_angle_std = calculate_angle_stddev(tri, stem_coords)
     random_tri_angle_std = calculate_angle_stddev(random_tri, random_coords)

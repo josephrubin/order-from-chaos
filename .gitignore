@@ -6,5 +6,10 @@ ev
 
 # Data
 data/
+newdata/
 
 __pycache__/
+
+gallery1/
+gallery2/
+gallery3/

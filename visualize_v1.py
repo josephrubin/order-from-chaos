@@ -44,12 +44,19 @@ def _main():
 
     visualize_init(settings)
     
+    heights = []
+    for point_id in state['stems']:
+        point = state['points'][str(point_id)]
+        height = point['height']
+        heights.append(height)
+    max_height = max(heights)
+
     stem_coords = []
     stems = []
     for point_id in state['stems']:
         point = state['points'][str(point_id)]
         height = point['height']
-        if height > 500:
+        if height > max_height * 0.5:
             stem_coords.append(point['coord'])
             stems.append(point_id)
 
@@ -66,9 +73,9 @@ def _main():
         alert_bad_usage_and_abort()
 
     tri = scipy.spatial.Delaunay(stem_coords)
-    boundary_simplices = [i for i, _ in enumerate(tri.simplices) if -1 in tri.neighbors[i]]
-    simplices_left = [s for i, s in enumerate(tri.simplices) if i not in boundary_simplices]
-    plt.triplot([p[0] for p in tri.points], [p[1] for p in tri.points], simplices_left)
+    #boundary_simplices = [i for i, _ in enumerate(tri.simplices) if -1 in tri.neighbors[i]]
+    #simplices_left = [s for i, s in enumerate(tri.simplices) if i not in boundary_simplices]
+    plt.triplot([p[0] for p in tri.points], [p[1] for p in tri.points], tri.simplices)
 
     plt.show()
 
