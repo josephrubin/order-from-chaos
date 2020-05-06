@@ -8,7 +8,6 @@ import math
 from os import sys
 import random
 
-import kdtreemap
 from matplotlib import pyplot as plt
 import matplotlib
 from mpl_toolkits.mplot3d import Axes3D
@@ -23,17 +22,16 @@ SQUARE = 1
 
 
 def _main():
-    """Run a 2D simulation of life. Chazelle is love. Chazelle is life."""
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         alert_bad_usage_and_abort()
     
     filename = sys.argv[1]
-    visualization = sys.argv[2]
 
     with open(filename, 'r') as data_file:
         data = json.loads(data_file.read())
         settings = data['settings']
-        state = data['state']
+        stems = data['stems']
+        points = data['points']
 
     # Find clusters.
     #coords = [state['points'][point_id]['coord'] for point_id in state['points']]
@@ -45,32 +43,22 @@ def _main():
     visualize_init(settings)
     
     heights = []
-    for point_id in state['stems']:
-        point = state['points'][str(point_id)]
+    for point_id in stems:
+        point = points[str(point_id)]
         height = point['height']
         heights.append(height)
     max_height = max(heights)
 
     stem_coords = []
-    stems = []
-    for point_id in state['stems']:
-        point = state['points'][str(point_id)]
+    stems_pruned = []
+    for point_id in stems:
+        point = points[str(point_id)]
         height = point['height']
         if height > max_height * 0.5:
             stem_coords.append(point['coord'])
-            stems.append(point_id)
+            stems_pruned.append(point_id)
 
-    state['stems'] = stems
-
-    if visualization == 'p':
-        visualize_state_points(state, settings)
-    elif visualization == 's':
-        visualize_state_stems(state, settings)
-    elif visualization == 'b':
-        visualize_state_points(state, settings)
-        visualize_state_stems(state, settings)
-    else:
-        alert_bad_usage_and_abort()
+    visualize_state_stems(stems_pruned, points, settings)
 
     tri = scipy.spatial.Delaunay(stem_coords)
     #boundary_simplices = [i for i, _ in enumerate(tri.simplices) if -1 in tri.neighbors[i]]
@@ -81,8 +69,7 @@ def _main():
 
 
 def alert_bad_usage_and_abort():
-    print('usage: {}: <filename.json> <p/s/b>'.format(sys.argv[0]), file=sys.stderr)
-    print('p - show all points (drops); s - show stem tops; b - show both', file=sys.stderr)
+    print('usage: {}: <filename.json>'.format(sys.argv[0]), file=sys.stderr)
     exit(1)
 
 
@@ -102,27 +89,7 @@ def visualize_init(settings):
     if settings['PLANE_SHAPE'] == DISK: ax.add_artist(plt.Circle((0,0), radius=1, fill=False))
 
 
-def visualize_state_points(state, settings):
-    stems = state['stems']
-    points = state['points']
-
-    fig = plt.gcf()
-    ax = plt.gca()
-    
-    for point_id in points:
-        point = points[str(point_id)]
-        coord = point['coord']
-        assert point['stem']
-        drop_artist = plt.Circle((coord[0], coord[1]), radius=settings['DROP_RADIUS'], fill=True, color=(0, 1, 0, 0.1))
-        ax.add_artist(drop_artist)
-
-    plt.draw()
-
-
-def visualize_state_stems(state, settings):
-    stems = state['stems']
-    points = state['points']
-
+def visualize_state_stems(stems, points, settings):
     fig = plt.gcf()
     ax = plt.gca()
 

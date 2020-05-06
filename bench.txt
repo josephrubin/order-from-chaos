@@ -1,0 +1,6 @@
+Number of stems:  109
+Number of points:  17836
+
+real    0m5.158s
+user    0m5.375s
+sys     0m0.672s

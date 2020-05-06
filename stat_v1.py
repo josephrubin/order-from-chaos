@@ -8,7 +8,6 @@ import math
 from os import sys
 import random
 
-import kdtreemap
 from matplotlib import pyplot as plt
 import matplotlib
 from mpl_toolkits.mplot3d import Axes3D
@@ -26,36 +25,37 @@ SQUARE = 1
 
 
 def _main():
-    """Run a 2D simulation of life. Chazelle is love. Chazelle is life."""
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         alert_bad_usage_and_abort()
     
     filename = sys.argv[1]
-    visualization = sys.argv[2]
 
     with open(filename, 'r') as data_file:
         data = json.loads(data_file.read())
         settings = data['settings']
-        state = data['state']
+
+        # Compatability.
+        if 'state' in data:
+            points = data['state']['points']
+            stems = data['state']['stems']
+        else:
+            points = data['points']
+            stems = data['stems']
     
     # Filter the stems if we would like to.
     heights = []
-    for point_id in state['stems']:
-        point = state['points'][str(point_id)]
+    for point_id in stems:
+        point = points[str(point_id)]
         height = point['height']
         heights.append(height)
     max_height = max(heights)
 
     stem_coords = []
-    stems = []
-    for point_id in state['stems']:
-        point = state['points'][str(point_id)]
+    for point_id in stems:
+        point = points[str(point_id)]
         height = point['height']
         if height > max_height * 0.5:
             stem_coords.append(point['coord'])
-            stems.append(point_id)
-
-    state['stems'] = stems
 
     # Remove boundary simplices.
     tri = scipy.spatial.Delaunay(stem_coords)
@@ -65,7 +65,7 @@ def _main():
 
     # Generate random points for comparison.
     random_coords = []
-    for i in range(len(state['stems'])):
+    for i in range(len(stem_coords)):
         random_coords.append(plane_v1.random_coord(settings['PLANE_SHAPE']))
 
     random_tri = scipy.spatial.Delaunay(random_coords)
@@ -79,9 +79,9 @@ def _main():
     random_tri_side_length_std = calculate_side_length_stddev(random_tri, random_coords)
 
     print('stem angle stddev is', tri_angle_std)
-    print('{} point random angle stddev is'.format(len(state['stems'])), random_tri_angle_std)
+    print('{} point random angle stddev is'.format(len(stem_coords)), random_tri_angle_std)
     print('stem side length stddev is', tri_side_length_std)
-    print('{} point random side length stddev is'.format(len(state['stems'])), random_tri_side_length_std)
+    print('{} point random side length stddev is'.format(len(stem_coords)), random_tri_side_length_std)
 
     #plt.triplot([p[0] for p in tri.points], [p[1] for p in tri.points], tri.simplices)
     #plt.triplot([p[0] for p in random_tri.points], [p[1] for p in random_tri.points], random_tri.simplices)
