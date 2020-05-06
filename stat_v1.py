@@ -39,20 +39,17 @@ def _main():
             points = data['state']['points']
             stems = data['state']['stems']
         else:
-            points = data['points']
             stems = data['stems']
     
     # Filter the stems if we would like to.
     heights = []
-    for point_id in stems:
-        point = points[str(point_id)]
+    for point in stems:
         height = point['height']
         heights.append(height)
     max_height = max(heights)
 
     stem_coords = []
-    for point_id in stems:
-        point = points[str(point_id)]
+    for point in stems:
         height = point['height']
         if height > max_height * 0.5:
             stem_coords.append(point['coord'])

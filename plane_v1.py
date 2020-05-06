@@ -71,13 +71,14 @@ def public_entry(settings, output_file_name):
             break
         assert node is not None
         point_id = node.data.ident
-        stems.append(point_id)
+        point = points[point_id]
+        stems.append({'coord': point['coord'], 'height': point['height']})
 
     #print('Number of stems: ', len(stems), file=sys.stderr)
     #print('Number of points: ', len(points), file=sys.stderr)
 
     # Output the relevant parts of the state.
-    _state = {'settings': settings, 'stems': stems, 'points': points}
+    _state = {'settings': settings, 'stems': stems}
     with open(output_file_name, 'w') as output_file:
         output_file.write(json.dumps(_state))
 

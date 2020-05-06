@@ -31,7 +31,6 @@ def _main():
         data = json.loads(data_file.read())
         settings = data['settings']
         stems = data['stems']
-        points = data['points']
 
     # Find clusters.
     #coords = [state['points'][point_id]['coord'] for point_id in state['points']]
@@ -43,22 +42,20 @@ def _main():
     visualize_init(settings)
     
     heights = []
-    for point_id in stems:
-        point = points[str(point_id)]
+    for point in stems:
         height = point['height']
         heights.append(height)
     max_height = max(heights)
 
     stem_coords = []
     stems_pruned = []
-    for point_id in stems:
-        point = points[str(point_id)]
+    for point in stems:
         height = point['height']
         if height > max_height * 0.5:
             stem_coords.append(point['coord'])
-            stems_pruned.append(point_id)
+            stems_pruned.append(point)
 
-    visualize_state_stems(stems_pruned, points, settings)
+    visualize_state_stems(stems_pruned, settings)
 
     tri = scipy.spatial.Delaunay(stem_coords)
     #boundary_simplices = [i for i, _ in enumerate(tri.simplices) if -1 in tri.neighbors[i]]
@@ -89,19 +86,17 @@ def visualize_init(settings):
     if settings['PLANE_SHAPE'] == DISK: ax.add_artist(plt.Circle((0,0), radius=1, fill=False))
 
 
-def visualize_state_stems(stems, points, settings):
+def visualize_state_stems(stems, settings):
     fig = plt.gcf()
     ax = plt.gca()
 
     height_max = None
-    for point_id in points:
-        point = points[str(point_id)]
+    for point in stems:
         height = point['height']
         if height_max is None or height > height_max:
             height_max = height
 
-    for point_id in stems:
-        point = points[str(point_id)]
+    for point in stems:
         coord = point['coord']
         height = point['height']
         #point_id_bottom = stem[0]
