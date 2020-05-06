@@ -13,7 +13,7 @@ PATH = 'collected_data/'
 
 
 SETTINGS = {
-    "DROP_COUNT": 1000000,
+    "DROP_COUNT": 10000,
     "DROP_RADIUS": 0.03,
     "STEM_RADIUS": 0.03,
     "BOUNCE_DISTANCE": 0.15,

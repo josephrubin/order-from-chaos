@@ -25,10 +25,11 @@ SQUARE = 1
 
 
 def _main():
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 3:
         alert_bad_usage_and_abort()
     
     filename = sys.argv[1]
+    output_filename = sys.argv[2]
 
     with open(filename, 'r') as data_file:
         data = json.loads(data_file.read())
@@ -75,10 +76,19 @@ def _main():
     tri_side_length_std = calculate_side_length_stddev(tri, stem_coords)
     random_tri_side_length_std = calculate_side_length_stddev(random_tri, random_coords)
 
-    print('stem angle stddev is', tri_angle_std)
-    print('{} point random angle stddev is'.format(len(stem_coords)), random_tri_angle_std)
-    print('stem side length stddev is', tri_side_length_std)
-    print('{} point random side length stddev is'.format(len(stem_coords)), random_tri_side_length_std)
+    with open(output_filename, 'w') as output_file:
+        output_file.write(json.dumps({
+            'STEM_ANGLE_STD_DEV': tri_angle_std,
+            'RANDOM_ANGLE_STD_DEV': random_tri_angle_std,
+            'STEM_SIDE_STD_DEV': tri_side_length_std,
+            'RANDOM_SIDE_STD_DEV': random_tri_side_length_std,
+            'STEM_COUNT': len(stem_coords)
+        }))
+
+    #print('stem angle stddev is', tri_angle_std)
+    #print('{} point random angle stddev is'.format(len(stem_coords)), random_tri_angle_std)
+    #print('stem side length stddev is', tri_side_length_std)
+    #print('{} point random side length stddev is'.format(len(stem_coords)), random_tri_side_length_std)
 
     #plt.triplot([p[0] for p in tri.points], [p[1] for p in tri.points], tri.simplices)
     #plt.triplot([p[0] for p in random_tri.points], [p[1] for p in random_tri.points], random_tri.simplices)
@@ -129,8 +139,7 @@ def calculate_angle(a, b, c):
 
 
 def alert_bad_usage_and_abort():
-    print('usage: {}: <filename.json> <p/s/b>'.format(sys.argv[0]), file=sys.stderr)
-    print('p - show all points (drops); s - show stem tops; b - show both', file=sys.stderr)
+    print('usage: {}: <filename.json> <output_filename.json>'.format(sys.argv[0]), file=sys.stderr)
     exit(1)
 
 
