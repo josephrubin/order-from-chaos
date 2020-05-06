@@ -5,6 +5,7 @@ import json
 import os
 import os.path
 import subprocess
+import sys
 import util
 
 
@@ -63,6 +64,7 @@ def _main():
 
 def run_test(test_name, trial_count, average_count, callback):
     print('Running test {}'.format(test_name))
+    sys.stdout.flush()
 
     # Copy the settings.
     settings = dict(SETTINGS)
@@ -93,12 +95,14 @@ def run_test(test_name, trial_count, average_count, callback):
                              procs,
                              i, j, test_name, trial_count, average_count)
             print('> Running {} trial {}/{} part {}/{}'.format(test_name, i, trial_count - 1, j, average_count - 1))
+            sys.stdout.flush()
 
     while procs:
         assert len(procs) <= MAX_PROC_COUNT
         wait_on_procs(procs, test_name, trial_count, average_count)
 
     print()
+    sys.stdout.flush()
 
 
 def schedule_process(proc_args, procs, trial, part, test_name, trial_count, average_count):
@@ -121,6 +125,7 @@ def wait_on_procs(procs, test_name, trial_count, average_count):
         try:
             proc.wait(0.5)
             print('< Done with {} trial {}/{} part {}/{}'.format(test_name, trial, trial_count - 1, part, average_count - 1))
+            sys.stdout.flush()
             return proc_data
         except:
             procs.append(proc_data)
