@@ -40,8 +40,25 @@ def _main():
         os.mkdir(PATH)
 
     def vary_old_genom_bias(settings, trial_number):
-        settings['OLD_GENOME_BIAS'] = 5 + 5 * trial_number
-    run_test('Vary_OLD_GENOME_BIAS', 12, 5, vary_old_genom_bias)
+        settings['OLD_GENOME_BIAS'] = 10 * trial_number
+    run_test('Vary_OLD_GENOME_BIAS', 10, 5, vary_old_genom_bias)
+
+    def vary_ground_stick_prob(settings, trial_number):
+        settings['GROUND_STICK_PROBABILITY'] = 0.05 + 0.05 * trial_number
+    run_test('Vary_GROUND_STICK_PROBABILITY', 10, 5, vary_ground_stick_prob)
+
+    def vary_melt_prob(settings, trial_number):
+        settings['MELT_PROBABILITY'] = 0.01 + 0.01 * trial_number
+    run_test('Vary_MELT_PROBABILITY', 10, 5, vary_melt_prob)
+    
+    def vary_drop_radius(settings, trial_number):
+        settings['DROP_RADIUS'] = 0.03 + 0.02 * trial_number
+        settings['STEM_RADIUS'] = 0.03 + 0.02 * trial_number
+    run_test('Vary_DROP_RADIUS', 5, 5, vary_drop_radius)
+
+    def vary_bounce_bonus(settings, trial_number):
+        settings['BOUNCE_HEIGHT_ADDITION'] = 5 + 5 * trial_number
+    run_test('Vary_BOUNCE_BONUS', 10, 5, vary_bounce_bonus)
 
 
 def run_test(test_name, trial_count, average_count, callback):
