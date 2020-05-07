@@ -6,9 +6,9 @@ import util
 
 
 # The number of drops to generate.
-DROP_COUNT = 1000000
+DROP_COUNT = 2000000#1000000
 # The radius of a drop.
-DROP_RADIUS = 0.03
+DROP_RADIUS = 0.005
 # The radius of a stem.
 STEM_RADIUS = DROP_RADIUS
 # The distance that a drop will bounce.
@@ -16,9 +16,9 @@ BOUNCE_DISTANCE = 5 * DROP_RADIUS
 # The shape of this 2D plane.
 PLANE_SHAPE = util.DISK
 # The probability that any given stem will melt after a single simulation step.
-MELT_PROBABILITY = 0.03
+MELT_PROBABILITY = 0.00003#0.03
 # The probability that a drop will stick to the ground.
-GROUND_STICK_PROBABILITY = 0.05
+GROUND_STICK_PROBABILITY = 0.5#0.05
 # The probability that a drop will stick to a stem if it doesn't bounce.
 STEM_STICK_PROBABILITY = 1
 # Run in interactive (draw-as-you-go) mode.
@@ -28,11 +28,11 @@ INTERACTIVE_DELAY = 0.2
 # Draw the state every INTERACTIVE_FAST_INTERVAL steps.
 INTERACTIVE_FAST_MODE = False
 # Interval for INTERACTIVE_FAST_MODE.
-INTERACTIVE_FAST_INTERVAL = 20000
+INTERACTIVE_FAST_INTERVAL = 50000
 # Additional height to add to a stem if a drop lands on it after a bounce.
 BOUNCE_HEIGHT_ADDITION = 20
 # Weight to apply to old genome when creting a new one after a drop lands on a stem.
-OLD_GENOME_BIAS = 40
+OLD_GENOME_BIAS = 1000000000#40
 # In INTERACTIVE_FAST_MODE, show bounce radius as circles around stems.
 SHOW_BOUNCE_RADIUS = False
 # Number of steps before doing a relatively larger melt (for efficiency).
