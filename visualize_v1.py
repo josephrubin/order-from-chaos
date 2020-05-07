@@ -55,12 +55,15 @@ def _main():
             stem_coords.append(point['coord'])
             stems_pruned.append(point)
 
-    visualize_state_stems(stems_pruned, settings)
+    #visualize_state_stems(stems_pruned, settings)
 
     tri = scipy.spatial.Delaunay(stem_coords)
     #boundary_simplices = [i for i, _ in enumerate(tri.simplices) if -1 in tri.neighbors[i]]
     #simplices_left = [s for i, s in enumerate(tri.simplices) if i not in boundary_simplices]
-    plt.triplot([p[0] for p in tri.points], [p[1] for p in tri.points], tri.simplices)
+    #plt.triplot([p[0] for p in tri.points], [p[1] for p in tri.points], tri.simplices)
+
+    vor = scipy.spatial.Voronoi(stem_coords)
+    scipy.spatial.voronoi_plot_2d(vor, plt.gca())
 
     plt.show()
 

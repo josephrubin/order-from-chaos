@@ -30,7 +30,10 @@ def _main():
     
     filename = sys.argv[1]
     output_filename = sys.argv[2]
+    public_main(filename, output_filename)
 
+
+def public_main(filename, output_filename):
     with open(filename, 'r') as data_file:
         data = json.loads(data_file.read())
         settings = data['settings']
