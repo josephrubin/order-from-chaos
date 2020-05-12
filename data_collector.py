@@ -1,4 +1,4 @@
-"""Run a lot of simulations and collect data."""
+"""Run a lot of simulations in parallel and collect data."""
 
 
 import json
