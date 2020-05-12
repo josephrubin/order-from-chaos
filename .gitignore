@@ -1,6 +1,9 @@
 # Emacs files.
 *~
 
+# Vscode.
+.vscode/
+
 # Virtual environment.
 ev
 
@@ -8,8 +11,11 @@ ev
 data/
 newdata/
 
+# Python interpreter.
 __pycache__/
+*.pyc
 
+# Data.
 gallery1/
 gallery2/
 gallery3/
